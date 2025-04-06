@@ -68,7 +68,7 @@ export default function Login() {
 
   const forgotPasswordLink = (
     <Link
-      href="/auth/forgot-password"
+      href="/forgot-password"
       className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-800"
     >
       Forgot password?
