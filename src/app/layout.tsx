@@ -1,16 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Noto_Sans } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/provider/theme-provider";
+import { ThemeScript } from "@/components/ui/theme-script";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const notoSans = Noto_Sans({
+  variable: "--font-noto-sans",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const inter = Inter({
+//   variable: "--font-inter",
+//   subsets: ["latin"],
+// });
+
+// const playfairDisplay = Playfair_Display({
+//   variable: "--font-playfair-display",
+//   subsets: ["latin"],
+// });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -23,11 +32,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html
+      lang="en"
+      className={`${notoSans.variable} antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript storageKey="vietlegal-theme" />
+      </head>
+      <body>
+        <ThemeProvider defaultTheme="dark" storageKey="vietlegal-theme">
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
