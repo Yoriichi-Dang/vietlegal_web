@@ -2,20 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-type ThemeMode = "dark" | "light" | "system";
-
-type ThemeProviderProps = {
-  children: React.ReactNode;
-  defaultTheme?: ThemeMode;
-  storageKey?: string;
-};
-
-type ThemeProviderState = {
-  theme: ThemeMode;
-  resolvedTheme: "dark" | "light";
-  setTheme: (theme: ThemeMode) => void;
-};
-
 const initialState: ThemeProviderState = {
   theme: "dark",
   resolvedTheme: "dark",
@@ -30,13 +16,10 @@ export function ThemeProvider({
   storageKey = "vietlegal-theme",
   ...props
 }: ThemeProviderProps) {
-  // Khởi tạo state với defaultTheme
   const [storedTheme, setStoredTheme] = useState<ThemeMode>(defaultTheme);
   const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">(
     defaultTheme === "system" ? "dark" : (defaultTheme as "dark" | "light")
   );
-
-  // Đồng bộ hóa state với localStorage khi component mount
   useEffect(() => {
     const savedTheme = localStorage.getItem(storageKey) as ThemeMode | null;
     if (savedTheme) {
@@ -44,7 +27,6 @@ export function ThemeProvider({
     }
   }, [storageKey]);
 
-  // Theo dõi thay đổi từ system preference
   useEffect(() => {
     if (storedTheme === "system") {
       const systemPreference = window.matchMedia("(prefers-color-scheme: dark)")
