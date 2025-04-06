@@ -50,7 +50,6 @@ export function ThemeProvider({
     }
   }, [storedTheme]);
 
-  // Hàm áp dụng theme vào DOM
   const applyTheme = (theme: string) => {
     document.documentElement.classList.remove("light", "dark");
     document.documentElement.classList.add(theme);
@@ -58,7 +57,6 @@ export function ThemeProvider({
     document.documentElement.style.colorScheme = theme;
   };
 
-  // Áp dụng theme khi state thay đổi
   useEffect(() => {
     const theme = storedTheme === "system" ? resolvedTheme : storedTheme;
     localStorage.setItem(storageKey, storedTheme);

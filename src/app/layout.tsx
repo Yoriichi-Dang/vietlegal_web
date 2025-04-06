@@ -3,23 +3,12 @@ import { Noto_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/provider/theme-provider";
 import { ThemeScript } from "@/components/ui/theme-script";
-
 const notoSans = Noto_Sans({
   variable: "--font-noto-sans",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
 });
-
-// const inter = Inter({
-//   variable: "--font-inter",
-//   subsets: ["latin"],
-// });
-
-// const playfairDisplay = Playfair_Display({
-//   variable: "--font-playfair-display",
-//   subsets: ["latin"],
-// });
 
 export const metadata: Metadata = {
   title: "Create Next App",
