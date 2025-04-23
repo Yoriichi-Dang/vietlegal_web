@@ -50,7 +50,7 @@ const AuthButton: React.FC<AuthButtonProps> = ({
 
   return (
     <button
-      className={`${baseStyles} ${widthStyles} ${sizeStyles} ${variantStyles} ${stateStyles} ${
+      className={`cursor-pointer ${baseStyles} ${widthStyles} ${sizeStyles} ${variantStyles} ${stateStyles} ${
         className || ""
       }`}
       disabled={disabled || isLoading}
