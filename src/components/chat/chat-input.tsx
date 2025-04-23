@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Plus, Mic, ChevronUp } from "lucide-react";
+import React, { useState, useRef, KeyboardEvent } from "react";
+import { Plus, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
@@ -9,10 +9,19 @@ import Image from "next/image";
 
 export default function ChatInput() {
   const [inputValue, setInputValue] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [model, setModel] = useState("model");
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
+    const value = e.target.value;
+    setInputValue(value);
+
+    // Reset error message khi người dùng tiếp tục nhập
+    if (submitError) {
+      setSubmitError(null);
+    }
 
     // Auto-resize textarea
     if (textareaRef.current) {
@@ -21,17 +30,76 @@ export default function ChatInput() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim()) {
-      console.log("Submitting:", inputValue);
-      setInputValue("");
+    if (!inputValue.trim() || isSubmitting) return;
 
-      // Reset height
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const messageData = {
+        message: inputValue,
+        model: model,
+        timestamp: new Date().toISOString(),
+      };
+
+      const response = await fetch("/api/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messageData),
+      });
+
+      // Kiểm tra content-type trước khi parse JSON
+      const contentType = response.headers.get("content-type");
+
+      if (!response.ok) {
+        // Xử lý theo content-type
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Có lỗi xảy ra khi gửi tin nhắn"
+          );
+        } else {
+          // Nếu không phải JSON, lấy text
+          const errorText = await response.text();
+          console.error("Server response:", errorText);
+          throw new Error(
+            `Lỗi HTTP ${response.status}: Vui lòng kiểm tra console để biết thêm chi tiết`
+          );
+        }
+      }
+      const result = await response.json();
+      console.log(result.response); // "Hello! How can I help you today?"
+      console.log(result.status); // "success"
+      console.log(result.timestamp); // "2025-04-23T15:43:25.444Z"
+      // Reset form
+      setInputValue("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
+    } catch (error) {
+      console.error("Lỗi gửi tin nhắn:", error);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi gửi tin nhắn"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Xử lý sự kiện nhấn phím
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Nếu nhấn Enter và không giữ Shift
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Ngăn không cho xuống dòng mặc định
+      handleSubmit(e); // Gọi hàm submit
+    }
+    // Nếu nhấn Shift+Enter thì sẽ xuống dòng bình thường (không cần xử lý gì thêm)
   };
 
   const toolItems: DropdownItem[] = [
@@ -181,26 +249,37 @@ export default function ChatInput() {
 
   return (
     <div className="w-full px-4 py-2">
-      <div className="w-full bg-zinc-900 p-4 rounded-2xl ring-2 ring-zinc-700/50 max-w-3xl mx-auto shadow-2xl">
+      <div className="w-full bg-white dark:bg-zinc-900 p-4 rounded-3xl ring-2 ring-zinc-100 dark:ring-zinc-700/50 mx-auto shadow-2xl">
         {/* Form with textarea */}
         <form onSubmit={handleSubmit}>
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            placeholder="Enter your message here..."
-            className={cn(
-              "w-full bg-zinc-800 border-0 rounded-2xl px-4 py-3 resize-none",
-              "text-white placeholder-zinc-400",
-              "focus:outline-none focus:ring-0",
-              "min-h-[44px] max-h-[200px]"
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter your message here... (Press Enter to send, Shift+Enter for new line)"
+              className={cn(
+                "w-full border-0 rounded-2xl px-4 py-3 resize-none",
+                "dark:text-white text-black placeholder-zinc-400",
+                "focus:outline-none focus:ring-0",
+                "min-h-[44px] max-h-[200px]"
+              )}
+              rows={1}
+              disabled={isSubmitting}
+            />
+
+            {/* Hiển thị thông báo lỗi nếu có */}
+            {submitError && (
+              <div className="absolute -top-6 left-0 text-xs text-red-500">
+                {submitError}
+              </div>
             )}
-            rows={1}
-          />
+          </div>
 
           {/* Buttons row */}
           <div className="flex items-center mt-2 justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Plus button with dropdown */}
               <DropDownAnimation
                 items={toolItems}
@@ -220,45 +299,38 @@ export default function ChatInput() {
             </div>
 
             <div className="flex items-center gap-1">
-              {/* Microphone button */}
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.95 }}
-                className={cn(
-                  "p-2 rounded-full bg-zinc-800 text-zinc-400",
-                  "hover:bg-zinc-700 transition-colors"
-                )}
-              >
-                <Mic size={18} />
-              </motion.button>
-
-              {/* Up arrow button - active only when there is input */}
               <motion.button
                 type="submit"
-                disabled={!inputValue.trim()}
-                whileTap={inputValue.trim() ? { scale: 0.95 } : {}}
+                disabled={!inputValue.trim() || isSubmitting}
+                whileTap={
+                  inputValue.trim() && !isSubmitting ? { scale: 0.95 } : {}
+                }
                 className={cn(
-                  "p-2 rounded-full transition-colors",
-                  inputValue.trim()
+                  "p-3 rounded-full transition-colors relative",
+                  inputValue.trim() && !isSubmitting
                     ? "bg-primary text-white hover:bg-primary/90"
-                    : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                    : "dark:bg-zinc-800 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 19V5M12 5L5 12M12 5L19 12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                {isSubmitting ? (
+                  <span className="block w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                ) : (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 19V5M12 5L5 12M12 5L19 12"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
               </motion.button>
             </div>
           </div>

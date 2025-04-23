@@ -89,8 +89,8 @@ const DropDownAnimation = ({
         whileTap={{ scale: 0.95 }}
         onClick={toggleDropdown}
         className={cn(
-          "flex items-center px-3 py-2 gap-1 rounded-full bg-zinc-800 text-zinc-400",
-          "hover:bg-zinc-700 transition-colors"
+          "flex items-center p-2 gap-1 rounded-full ring-2 ring-zinc-100 dark:ring-zinc-700/50 bg-white dark:bg-zinc-800 text-zinc-400",
+          "hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors"
         )}
       >
         {title && <span className="text-xs font-medium">{title}</span>}

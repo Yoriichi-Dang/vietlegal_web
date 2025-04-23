@@ -1,19 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SidebarTool from "./sidebar-tool";
 import SidebarChatItem from "./sidebar-chat-item";
-const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+import { useWindowSize } from "@/hooks/useWindowSize";
 
+const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(true); // Bắt đầu với sidebar đóng
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [manuallyOpened, setManuallyOpened] = useState(false); // Theo dõi việc mở thủ công
+  const { width } = useWindowSize();
+
+  // Biến để kiểm tra xem có phải là màn hình nhỏ không
+  const isSmallScreen = width < 750;
+
+  // Đánh dấu component đã mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Xử lý việc mở/đóng sidebar
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+
+    // Đánh dấu là đã được mở thủ công nếu sidebar đang được mở
+    if (!newState && isSmallScreen) {
+      setManuallyOpened(true);
+    } else if (newState) {
+      // Reset lại trạng thái khi đóng
+      setManuallyOpened(false);
+    }
   };
+
+  // Tự động điều chỉnh sidebar dựa trên kích thước màn hình
+  useEffect(() => {
+    if (!isMounted) return;
+
+    if (isSmallScreen) {
+      // Chỉ tự động đóng nếu chưa được mở thủ công
+      if (!manuallyOpened) {
+        setIsCollapsed(true);
+      }
+    } else {
+      // Luôn mở trên màn hình lớn
+      setIsCollapsed(false);
+      setManuallyOpened(false); // Reset lại trạng thái
+    }
+  }, [width, isSmallScreen, isMounted, manuallyOpened]);
 
   const sidebarVariants = {
     expanded: {
@@ -162,95 +201,109 @@ const Sidebar = () => {
     { id: 23, name: "GraphQL vs REST API", icon: <MessageSquare size={14} /> },
   ];
 
+  // Điều kiện hiển thị overlay: đã mount + màn hình nhỏ + không đóng + đã mở thủ công
+  const showOverlay =
+    isMounted && isSmallScreen && !isCollapsed && manuallyOpened;
+
   return (
-    <div className="flex h-screen relative">
-      {/* Toggle button - always visible outside of sidebar */}
-      <SidebarTool isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+    <>
+      {/* Overlay chỉ hiển thị khi thỏa mãn tất cả điều kiện */}
+      {showOverlay && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm"
+          onClick={toggleSidebar}
+        />
+      )}
 
-      {/* Main sidebar content */}
-      <motion.div
-        variants={sidebarVariants}
-        initial={false}
-        animate={isCollapsed ? "collapsed" : "expanded"}
-        className={cn(
-          "h-screen flex flex-col relative overflow-hidden",
-          "bg-white dark:bg-black",
-          "text-gray-800 dark:text-white",
-          "transition-all duration-500 ease-in-out shadow-lg"
-        )}
-      >
-        {/* Main content */}
-        <AnimatePresence mode="wait">
-          {!isCollapsed && (
-            <motion.div
-              variants={fadeInVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex flex-col h-screen pt-14"
-            >
-              {/* Scrollable content area */}
-              <div className="overflow-hidden">
-                <ScrollArea className="h-[calc(100vh-60px)]">
-                  <div className="px-3">
-                    <motion.div
-                      variants={itemVariants}
-                      className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
-                    >
-                      Previous 7 Days
-                    </motion.div>
-                    {recentItems.map((item) => (
-                      <SidebarChatItem
-                        key={item.id}
-                        id={item.id.toString()}
-                        name={item.name}
-                        activeDropdownId={activeDropdownId}
-                        setActiveDropdownId={setActiveDropdownId}
-                      />
-                    ))}
+      <nav className="flex h-screen relative z-40">
+        {/* Toggle button - always visible outside of sidebar */}
+        <SidebarTool isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
 
-                    <motion.div
-                      variants={itemVariants}
-                      className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
-                    >
-                      Previous 30 Days
-                    </motion.div>
-                    {olderItems.map((item) => (
-                      <SidebarChatItem
-                        key={item.id}
-                        id={item.id.toString()}
-                        name={item.name}
-                        activeDropdownId={activeDropdownId}
-                        setActiveDropdownId={setActiveDropdownId}
-                      />
-                    ))}
-
-                    {/* Bottom section for upgrade */}
-                    <div className="p-2 border-t border-gray-200 dark:border-gray-800 my-4">
-                      <div
-                        className={cn(
-                          "flex items-center gap-3 py-3 px-3 rounded-md cursor-pointer",
-                          "hover:bg-gray-100 dark:hover:bg-zinc-800"
-                        )}
-                        onClick={() => setActiveDropdownId(null)} // Close any open dropdown when clicking upgrade plan
+        {/* Main sidebar content */}
+        <motion.div
+          variants={sidebarVariants}
+          initial={false}
+          animate={isCollapsed ? "collapsed" : "expanded"}
+          className={cn(
+            "h-screen flex flex-col relative overflow-hidden",
+            "bg-white dark:bg-black",
+            "text-gray-800 dark:text-white",
+            "transition-all duration-500 ease-in-out shadow-lg"
+          )}
+        >
+          {/* Main content */}
+          <AnimatePresence mode="wait">
+            {!isCollapsed && (
+              <motion.div
+                variants={fadeInVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex flex-col h-screen pt-14"
+              >
+                {/* Scrollable content area */}
+                <div className="overflow-hidden">
+                  <ScrollArea className="h-[calc(100vh-60px)]">
+                    <div className="px-3">
+                      <motion.div
+                        variants={itemVariants}
+                        className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
                       >
-                        <Clock
-                          size={14}
-                          className="text-gray-500 dark:text-gray-400"
+                        Previous 7 Days
+                      </motion.div>
+                      {recentItems.map((item) => (
+                        <SidebarChatItem
+                          key={item.id}
+                          id={item.id.toString()}
+                          name={item.name}
+                          activeDropdownId={activeDropdownId}
+                          setActiveDropdownId={setActiveDropdownId}
                         />
-                        <span className="text-sm font-normal">
-                          Upgrade plan
-                        </span>
+                      ))}
+
+                      <motion.div
+                        variants={itemVariants}
+                        className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
+                      >
+                        Previous 30 Days
+                      </motion.div>
+                      {olderItems.map((item) => (
+                        <SidebarChatItem
+                          key={item.id}
+                          id={item.id.toString()}
+                          name={item.name}
+                          activeDropdownId={activeDropdownId}
+                          setActiveDropdownId={setActiveDropdownId}
+                        />
+                      ))}
+
+                      {/* Bottom section for upgrade */}
+                      <div className="p-2 border-t border-gray-200 dark:border-gray-800 my-4">
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 py-3 px-3 rounded-md cursor-pointer",
+                            "hover:bg-gray-100 dark:hover:bg-zinc-800"
+                          )}
+                          onClick={() => setActiveDropdownId(null)} // Close any open dropdown when clicking upgrade plan
+                        >
+                          <Clock
+                            size={14}
+                            className="text-gray-500 dark:text-gray-400"
+                          />
+                          <span className="text-sm font-normal">
+                            Upgrade plan
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </ScrollArea>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
+                  </ScrollArea>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </nav>
+    </>
   );
 };
 

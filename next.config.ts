@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
         hostname: "registry.npmmirror.com",
       },
       {
-        hostname: "scontent.fdad3-5.fna.fbcdn.net",
+        hostname: "scontent.fdad1-3.fna.fbcdn.net",
       },
       {
         hostname: "static.vecteezy.com",

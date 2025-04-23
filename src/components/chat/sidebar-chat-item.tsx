@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, Dispatch, SetStateAction } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MoreVertical, Trash, Edit, Share } from "lucide-react";
@@ -8,7 +8,7 @@ type Props = {
   id: string;
   name: string;
   activeDropdownId: string | null;
-  setActiveDropdownId: (id: string | null) => void;
+  setActiveDropdownId: Dispatch<SetStateAction<string | null>>;
 };
 
 const SidebarChatItem = ({
