@@ -8,13 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import NewChatIcon from "../icons/new-chat-icon";
 import ToggleSidebarIcon from "../icons/toggle-sidebar-icon";
 import MenuIcon from "../icons/menu-icon";
-import { useTheme } from "@/provider/theme-provider";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { resolvedTheme } = useTheme(); // Sử dụng hook để lấy theme hiện tại
-  const isDarkTheme = resolvedTheme === "dark";
 
   // Kiểm tra kích thước màn hình khi component được render
   useEffect(() => {
@@ -318,15 +315,11 @@ const Sidebar = () => {
                         <span className="text-sm block truncate">
                           {item.name}
                         </span>
-                        {/* Dynamic gradient overlay based on theme */}
-                        <div
-                          className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent"
-                          style={{
-                            background: isDarkTheme
-                              ? "linear-gradient(to right, rgba(17, 24, 39, 0), rgba(17, 24, 39, 1))"
-                              : "linear-gradient(to right, rgba(243, 244, 246, 0), rgba(243, 244, 246, 1))",
-                          }}
-                        ></div>
+                        {/* Gradient overlay khi không hover */}
+                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent to-gray-100 dark:to-gray-900" />
+
+                        {/* Gradient overlay khi hover - chuyển màu theo hover background */}
+                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-800" />
                       </div>
                     </motion.div>
                   ))}
@@ -354,15 +347,11 @@ const Sidebar = () => {
                         <span className="text-sm block truncate">
                           {item.name}
                         </span>
-                        {/* Dynamic gradient overlay based on theme */}
-                        <div
-                          className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent"
-                          style={{
-                            background: isDarkTheme
-                              ? "linear-gradient(to right, rgba(17, 24, 39, 0), rgba(17, 24, 39, 1))"
-                              : "linear-gradient(to right, rgba(243, 244, 246, 0), rgba(243, 244, 246, 1))",
-                          }}
-                        ></div>
+                        {/* Gradient overlay khi không hover */}
+                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent to-gray-100 dark:to-gray-900" />
+
+                        {/* Gradient overlay khi hover - chuyển màu theo hover background */}
+                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-800" />
                       </div>
                     </motion.div>
                   ))}
