@@ -1,33 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Globe, BookOpen, Clock } from "lucide-react";
+import { MessageSquare, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import NewChatIcon from "../icons/new-chat-icon";
-import ToggleSidebarIcon from "../icons/toggle-sidebar-icon";
-import MenuIcon from "../icons/menu-icon";
-
+import SidebarTool from "./sidebar-tool";
+import SidebarChatItem from "./sidebar-chat-item";
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Kiểm tra kích thước màn hình khi component được render
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px là điểm breakpoint cho thiết bị di động
-    };
-
-    // Kiểm tra lần đầu
-    checkIfMobile();
-
-    // Lắng nghe sự kiện resize của cửa sổ
-    window.addEventListener("resize", checkIfMobile);
-
-    // Cleanup
-    return () => window.removeEventListener("resize", checkIfMobile);
-  }, []);
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -54,36 +36,14 @@ const Sidebar = () => {
     },
   };
 
-  // Variants cho nút NewChat để di chuyển mượt mà
-  const newChatButtonVariants = {
-    expanded: {
-      left: isMobile ? "13rem" : "13rem",
-      transition: {
-        type: "spring",
-        stiffness: 200,
-        damping: 25,
-        duration: 0.3,
-      },
-    },
-    collapsed: {
-      left: "3rem",
-      transition: {
-        type: "spring",
-        stiffness: 200,
-        damping: 25,
-        duration: 0.3,
-      },
-    },
-  };
-
   const fadeInVariants = {
     hidden: {
       opacity: 0,
       x: -20,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
+        stiffness: 300,
+        damping: 20,
       },
     },
     visible: {
@@ -91,10 +51,10 @@ const Sidebar = () => {
       x: 0,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
+        stiffness: 300,
+        damping: 20,
+        staggerChildren: 0.02,
+        delayChildren: 0,
       },
     },
     exit: {
@@ -102,9 +62,9 @@ const Sidebar = () => {
       x: -20,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
-        staggerChildren: 0.05,
+        stiffness: 300,
+        damping: 20,
+        staggerChildren: 0.02,
         staggerDirection: -1,
       },
     },
@@ -116,8 +76,8 @@ const Sidebar = () => {
       x: -20,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
+        stiffness: 300,
+        damping: 20,
       },
     },
     visible: {
@@ -125,8 +85,8 @@ const Sidebar = () => {
       x: 0,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
+        stiffness: 300,
+        damping: 20,
       },
     },
     exit: {
@@ -134,27 +94,8 @@ const Sidebar = () => {
       x: -20,
       transition: {
         type: "spring",
-        stiffness: 200,
-        damping: 25,
-      },
-    },
-  };
-
-  const buttonVariants = {
-    hover: {
-      scale: 1.05,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
-      },
-    },
-    tap: {
-      scale: 0.95,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
+        stiffness: 300,
+        damping: 20,
       },
     },
   };
@@ -163,7 +104,7 @@ const Sidebar = () => {
   const recentItems = [
     {
       id: 1,
-      name: "Thần số học Đặng Hoàng Nguyên",
+      name: "Thần số học Đặng Hoàng Nguyên dep trai so 1 mat troi",
       icon: <MessageSquare size={14} />,
     },
     { id: 2, name: "Mỗ tả bạn thân", icon: <MessageSquare size={14} /> },
@@ -179,73 +120,52 @@ const Sidebar = () => {
     { id: 5, name: "Công ty Arm", icon: <MessageSquare size={14} /> },
     { id: 6, name: "MCP trong AI", icon: <MessageSquare size={14} /> },
     { id: 7, name: "Tìm hiểu về Hyperloop", icon: <MessageSquare size={14} /> },
+    { id: 8, name: "Tìm hiểu về Hyperloop", icon: <MessageSquare size={14} /> },
     {
-      id: 8,
+      id: 9,
       name: "Kernel trong hệ điều hành",
       icon: <MessageSquare size={14} />,
     },
-    { id: 9, name: "Giới hạn tốc độ", icon: <MessageSquare size={14} /> },
+    { id: 10, name: "Giới hạn tốc độ", icon: <MessageSquare size={14} /> },
     {
-      id: 10,
+      id: 11,
       name: "House in Takasugian Decision",
       icon: <MessageSquare size={14} />,
     },
-    { id: 11, name: "Hello and Response", icon: <MessageSquare size={14} /> },
-    { id: 12, name: "Da Nang Description", icon: <MessageSquare size={14} /> },
-    { id: 13, name: "Trở lý AI pháp lý", icon: <MessageSquare size={14} /> },
-    { id: 14, name: "Crawl data to Qdrant", icon: <MessageSquare size={14} /> },
-    { id: 15, name: "Tạo SSH key GitHub", icon: <MessageSquare size={14} /> },
+    { id: 12, name: "Hello and Response", icon: <MessageSquare size={14} /> },
+    { id: 13, name: "Da Nang Description", icon: <MessageSquare size={14} /> },
+    { id: 14, name: "Trở lý AI pháp lý", icon: <MessageSquare size={14} /> },
+    { id: 15, name: "Crawl data to Qdrant", icon: <MessageSquare size={14} /> },
+    { id: 16, name: "Tạo SSH key GitHub", icon: <MessageSquare size={14} /> },
     {
-      id: 16,
-      name: "Tạo server FastAPI WebSocket",
+      id: 17,
+      name: "Tạo server FastAPI WebSocket để chat",
       icon: <MessageSquare size={14} />,
     },
-    { id: 17, name: "SSO là gì", icon: <MessageSquare size={14} /> },
-  ];
-
-  const mainNavItems = [
-    { id: "chatgpt", name: "ChatGPT", icon: <MessageSquare size={14} /> },
-    { id: "explore", name: "Explore GPTs", icon: <Globe size={14} /> },
-    { id: "library", name: "Library", icon: <BookOpen size={14} /> },
+    { id: 18, name: "SSO là gì", icon: <MessageSquare size={14} /> },
+    {
+      id: 19,
+      name: "Machine Learning cơ bản",
+      icon: <MessageSquare size={14} />,
+    },
+    {
+      id: 20,
+      name: "Học React từ cơ bản đến nâng cao",
+      icon: <MessageSquare size={14} />,
+    },
+    { id: 21, name: "Docker và Kubernetes", icon: <MessageSquare size={14} /> },
+    {
+      id: 22,
+      name: "Microservice Architecture",
+      icon: <MessageSquare size={14} />,
+    },
+    { id: 23, name: "GraphQL vs REST API", icon: <MessageSquare size={14} /> },
   ];
 
   return (
     <div className="flex h-screen relative">
       {/* Toggle button - always visible outside of sidebar */}
-      <motion.button
-        variants={buttonVariants}
-        whileHover="hover"
-        whileTap="tap"
-        onClick={toggleSidebar}
-        className={cn(
-          "absolute cursor-pointer z-10 p-1.5 rounded-md",
-          "hover:bg-gray-200 dark:hover:bg-gray-800/50 flex items-center justify-center w-10 h-10",
-          "text-gray-700 dark:text-gray-300",
-          "top-2 transition-all duration-300"
-        )}
-        style={{ left: "0.5rem" }}
-      >
-        {isMobile ? <MenuIcon /> : <ToggleSidebarIcon />}
-      </motion.button>
-
-      {/* NewChat button with smooth animation */}
-      {
-        <motion.button
-          variants={newChatButtonVariants}
-          initial={false}
-          animate={isCollapsed ? "collapsed" : "expanded"}
-          whileHover="hover"
-          whileTap="tap"
-          className={cn(
-            "absolute cursor-pointer z-10 p-1.5 rounded-md",
-            "hover:bg-gray-200 dark:hover:bg-gray-800/50 flex items-center justify-center w-10 h-10",
-            "text-gray-700 dark:text-gray-300",
-            "top-2"
-          )}
-        >
-          <NewChatIcon />
-        </motion.button>
-      }
+      <SidebarTool isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
 
       {/* Main sidebar content */}
       <motion.div
@@ -254,7 +174,7 @@ const Sidebar = () => {
         animate={isCollapsed ? "collapsed" : "expanded"}
         className={cn(
           "h-screen flex flex-col relative overflow-hidden",
-          "bg-gray-100 dark:bg-gray-900",
+          "bg-white dark:bg-black",
           "text-gray-800 dark:text-white",
           "transition-all duration-500 ease-in-out shadow-lg"
         )}
@@ -267,116 +187,65 @@ const Sidebar = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className="flex-1 flex flex-col pt-14"
+              className="flex flex-col h-screen pt-14"
             >
-              {/* Main Navigation */}
-              <motion.div variants={itemVariants} className="px-2 py-2">
-                {mainNavItems.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    variants={itemVariants}
-                    custom={index}
-                    className={cn(
-                      "flex items-center space-x-3 px-2 py-1.5 rounded-md cursor-pointer text-sm",
-                      "hover:bg-gray-200 dark:hover:bg-gray-800"
-                    )}
-                  >
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {item.icon}
-                    </span>
-                    <span>{item.name}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/* Scrollable area for recent chats */}
-              <ScrollArea className="flex-1">
-                <motion.div variants={itemVariants} className="px-2">
-                  <motion.div
-                    variants={itemVariants}
-                    className="text-[11px] text-gray-500 dark:text-gray-400 font-medium px-2 py-1.5"
-                  >
-                    Previous 7 Days
-                  </motion.div>
-                  {recentItems.map((item, index) => (
+              {/* Scrollable content area */}
+              <div className="overflow-hidden">
+                <ScrollArea className="h-[calc(100vh-60px)]">
+                  <div className="px-3">
                     <motion.div
-                      key={item.id}
                       variants={itemVariants}
-                      custom={index}
-                      className={cn(
-                        "flex items-center space-x-3 px-2 py-1.5 rounded-md cursor-pointer group relative",
-                        "hover:bg-gray-200 dark:hover:bg-gray-800"
-                      )}
+                      className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
                     >
-                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
-                        {item.icon}
-                      </span>
-                      <div className="relative w-full overflow-hidden">
-                        <span className="text-sm block truncate">
-                          {item.name}
-                        </span>
-                        {/* Gradient overlay khi không hover */}
-                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent to-gray-100 dark:to-gray-900" />
-
-                        {/* Gradient overlay khi hover - chuyển màu theo hover background */}
-                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-800" />
-                      </div>
+                      Previous 7 Days
                     </motion.div>
-                  ))}
+                    {recentItems.map((item) => (
+                      <SidebarChatItem
+                        key={item.id}
+                        id={item.id.toString()}
+                        name={item.name}
+                        activeDropdownId={activeDropdownId}
+                        setActiveDropdownId={setActiveDropdownId}
+                      />
+                    ))}
 
-                  <motion.div
-                    variants={itemVariants}
-                    className="text-[11px] text-gray-500 dark:text-gray-400 font-medium px-2 py-1.5 mt-3"
-                  >
-                    Previous 30 Days
-                  </motion.div>
-                  {olderItems.map((item, index) => (
                     <motion.div
-                      key={item.id}
                       variants={itemVariants}
-                      custom={index}
-                      className={cn(
-                        "flex items-center space-x-3 px-2 py-1.5 rounded-md cursor-pointer group relative",
-                        "hover:bg-gray-200 dark:hover:bg-gray-800"
-                      )}
+                      className="text-xs text-gray-500 dark:text-gray-400 font-medium px-3 pt-3 pb-2"
                     >
-                      <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">
-                        {item.icon}
-                      </span>
-                      <div className="relative w-full overflow-hidden">
-                        <span className="text-sm block truncate">
-                          {item.name}
-                        </span>
-                        {/* Gradient overlay khi không hover */}
-                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none bg-gradient-to-r from-transparent to-gray-100 dark:to-gray-900" />
-
-                        {/* Gradient overlay khi hover - chuyển màu theo hover background */}
-                        <div className="absolute top-0 right-0 h-full w-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent to-gray-200 dark:to-gray-800" />
-                      </div>
+                      Previous 30 Days
                     </motion.div>
-                  ))}
-                </motion.div>
-              </ScrollArea>
+                    {olderItems.map((item) => (
+                      <SidebarChatItem
+                        key={item.id}
+                        id={item.id.toString()}
+                        name={item.name}
+                        activeDropdownId={activeDropdownId}
+                        setActiveDropdownId={setActiveDropdownId}
+                      />
+                    ))}
 
-              {/* Bottom section for upgrade */}
-              <motion.div
-                variants={itemVariants}
-                className="p-2 border-t border-gray-200 dark:border-gray-800"
-              >
-                <motion.div
-                  variants={itemVariants}
-                  className={cn(
-                    "flex items-center space-x-3 text-xs px-2 py-1.5 rounded-md cursor-pointer",
-                    "hover:bg-gray-200 dark:hover:bg-gray-800"
-                  )}
-                >
-                  <Clock
-                    size={14}
-                    className="text-gray-500 dark:text-gray-400"
-                  />
-                  <span>Upgrade plan</span>
-                </motion.div>
-              </motion.div>
+                    {/* Bottom section for upgrade */}
+                    <div className="p-2 border-t border-gray-200 dark:border-gray-800 my-4">
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 py-3 px-3 rounded-md cursor-pointer",
+                          "hover:bg-gray-100 dark:hover:bg-zinc-800"
+                        )}
+                        onClick={() => setActiveDropdownId(null)} // Close any open dropdown when clicking upgrade plan
+                      >
+                        <Clock
+                          size={14}
+                          className="text-gray-500 dark:text-gray-400"
+                        />
+                        <span className="text-sm font-normal">
+                          Upgrade plan
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

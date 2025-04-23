@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Noto_Sans } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/provider/theme-provider";
 import { ThemeScript } from "@/components/ui/theme-script";
-const notoSans = Noto_Sans({
-  variable: "--font-noto-sans",
+
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
+  weight: ["400", "500", "700"],
   display: "swap",
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -23,8 +24,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${notoSans.variable} antialiased`}
-      suppressHydrationWarning
+      className={`${roboto.variable} antialiased`}
+      suppressHydrationWarning={true}
     >
       <head>
         <ThemeScript storageKey="vietlegal-theme" />
