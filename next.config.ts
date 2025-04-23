@@ -5,7 +5,13 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: "images.unsplash.com",
+        hostname: "registry.npmmirror.com",
+      },
+      {
+        hostname: "scontent.fdad3-5.fna.fbcdn.net",
+      },
+      {
+        hostname: "static.vecteezy.com",
       },
     ],
   },
