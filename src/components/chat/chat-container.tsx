@@ -1,23 +1,29 @@
 import { ChatContainerProps } from "@/types/chat";
 import ChatMessage from "./chat-message";
+
 const ChatContainer: React.FC<ChatContainerProps> = ({ messages, title }) => {
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 flex flex-col space-y-8">
-      {/* Tiêu đề (nếu có) */}
-      {title && (
-        <div className="text-center">
-          <h2 className="text-2xl font-medium text-gray-800">{title}</h2>
+    <div className="w-full h-full flex flex-col custom-scrollbar [scrollbar-gutter:stable]  overflow-y-auto">
+      {/* Title (if present) */}
+      {title === "New Conversation" && messages.length === 0 && (
+        <div className="text-center mt-6">
+          <h2 className="lg:text-3xl text-2xl font-medium text-gray-800 dark:text-gray-200">
+            {title}
+          </h2>
         </div>
       )}
 
-      {/* Danh sách tin nhắn */}
-      <div className="flex flex-col space-y-4">
+      {/* Message list */}
+      <div className="flex-1 flex flex-col mt-10 space-y-2 w-full max-w-[1000px] mx-auto pb-24">
         {messages.map((message, index) => (
-          <ChatMessage
+          <div
             key={index}
-            content={message.content}
-            isUser={message.isUser}
-          />
+            className="flex justify-center items-center w-full py-2"
+          >
+            <div className="md:max-w-3xl sm:max-w-full w-full">
+              <ChatMessage content={message.content} isUser={message.isUser} />
+            </div>
+          </div>
         ))}
       </div>
     </div>

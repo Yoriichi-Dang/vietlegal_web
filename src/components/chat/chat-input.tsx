@@ -6,13 +6,16 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
 import Image from "next/image";
+import { useConversation } from "@/provider/conversation-provider";
 
 export default function ChatInput() {
   const [inputValue, setInputValue] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [model, setModel] = useState("model");
+
+  // Use conversation context
+  const { sendMessage, isLoading } = useConversation();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -32,49 +35,12 @@ export default function ChatInput() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isSubmitting) return;
-
-    setIsSubmitting(true);
-    setSubmitError(null);
+    if (!inputValue.trim() || isLoading) return;
 
     try {
-      const messageData = {
-        message: inputValue,
-        model: model,
-        timestamp: new Date().toISOString(),
-      };
+      // Send message through conversation provider
+      await sendMessage(inputValue);
 
-      const response = await fetch("/api/message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(messageData),
-      });
-
-      // Kiểm tra content-type trước khi parse JSON
-      const contentType = response.headers.get("content-type");
-
-      if (!response.ok) {
-        // Xử lý theo content-type
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Có lỗi xảy ra khi gửi tin nhắn"
-          );
-        } else {
-          // Nếu không phải JSON, lấy text
-          const errorText = await response.text();
-          console.error("Server response:", errorText);
-          throw new Error(
-            `Lỗi HTTP ${response.status}: Vui lòng kiểm tra console để biết thêm chi tiết`
-          );
-        }
-      }
-      const result = await response.json();
-      console.log(result.response); // "Hello! How can I help you today?"
-      console.log(result.status); // "success"
-      console.log(result.timestamp); // "2025-04-23T15:43:25.444Z"
       // Reset form
       setInputValue("");
       if (textareaRef.current) {
@@ -87,8 +53,6 @@ export default function ChatInput() {
           ? error.message
           : "Có lỗi xảy ra khi gửi tin nhắn"
       );
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -248,8 +212,8 @@ export default function ChatInput() {
   ];
 
   return (
-    <div className="w-full px-4 py-2">
-      <div className="w-full bg-white dark:bg-zinc-900 p-4 rounded-3xl ring-2 ring-zinc-100 dark:ring-zinc-700/50 mx-auto shadow-2xl">
+    <div className="max-w-3xl mx-auto">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-sm">
         {/* Form with textarea */}
         <form onSubmit={handleSubmit}>
           <div className="relative">
@@ -258,15 +222,15 @@ export default function ChatInput() {
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Enter your message here... (Press Enter to send, Shift+Enter for new line)"
+              placeholder="Enter your message here..."
               className={cn(
-                "w-full border-0 rounded-2xl px-4 py-3 resize-none",
+                "w-full border-0 rounded-xl px-4 py-3 resize-none",
                 "dark:text-white text-black placeholder-zinc-400",
                 "focus:outline-none focus:ring-0",
-                "min-h-[44px] max-h-[200px]"
+                "min-h-[44px] max-h-[150px]"
               )}
               rows={1}
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
 
             {/* Hiển thị thông báo lỗi nếu có */}
@@ -278,7 +242,7 @@ export default function ChatInput() {
           </div>
 
           {/* Buttons row */}
-          <div className="flex items-center mt-2 justify-between">
+          <div className="flex items-center mt-1 px-3 pb-2 justify-between">
             <div className="flex items-center gap-3">
               {/* Plus button with dropdown */}
               <DropDownAnimation
@@ -294,25 +258,25 @@ export default function ChatInput() {
                 containerClassName="space-y-1"
                 itemClassName="hover:bg-zinc-700/50"
                 title={model}
-                titleIcon={<ChevronUp size={18} />}
+                titleIcon={<ChevronUp size={16} />}
               />
             </div>
 
             <div className="flex items-center gap-1">
               <motion.button
                 type="submit"
-                disabled={!inputValue.trim() || isSubmitting}
+                disabled={!inputValue.trim() || isLoading}
                 whileTap={
-                  inputValue.trim() && !isSubmitting ? { scale: 0.95 } : {}
+                  inputValue.trim() && !isLoading ? { scale: 0.95 } : {}
                 }
                 className={cn(
-                  "p-3 rounded-full transition-colors relative",
-                  inputValue.trim() && !isSubmitting
+                  "p-2 rounded-full transition-colors relative",
+                  inputValue.trim() && !isLoading
                     ? "bg-primary text-white hover:bg-primary/90"
                     : "dark:bg-zinc-800 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}
               >
-                {isSubmitting ? (
+                {isLoading ? (
                   <span className="block w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
                 ) : (
                   <svg

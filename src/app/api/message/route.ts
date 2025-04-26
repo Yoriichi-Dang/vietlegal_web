@@ -76,21 +76,19 @@ export async function POST(request: Request) {
       typeof sanitizedData === "object"
         ? JSON.stringify(sanitizedData)
         : sanitizedData;
-
     const completion = await client.chat.completions.create({
       model: "gpt-4.1",
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful assistant that always responds in JSON format.",
+            "You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise. Return the answer in Vietnamese.",
         },
         {
           role: "user",
           content: content,
         },
       ],
-      response_format: { type: "json_object" },
     });
 
     // Parse the JSON response from OpenAI

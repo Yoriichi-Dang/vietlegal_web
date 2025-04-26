@@ -2,7 +2,118 @@
 
 /* Tạo custom variant cho dark mode */
 @custom-variant dark (&:where(.dark, .dark *));
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent; /* Firefox */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* Chiều rộng của scrollbar */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent; /* Background của track (phần nền) */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(
+      156,
+      163,
+      175,
+      0.5
+    ); /* Màu của thumb với độ trong suốt */
+    border-radius: 6px; /* Bo tròn cạnh */
+  }
+
+  /* Dark mode version */
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(75, 85, 99, 0.5) transparent; /* Firefox */
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(75, 85, 99, 0.5); /* Màu tối hơn cho dark mode */
+  }
+  /* Thêm vào global.css hoặc styles của bạn */
+  /* Thêm vào global.css */
+
+  /* Đảm bảo code blocks đủ rõ ràng */
+  .markdown-content pre {
+    overflow-x: auto;
+    background-color: #1e1e1e !important; /* Màu nền đồng nhất */
+  }
+
+  /* Tăng contrast cho code */
+  .markdown-content pre code {
+    color: #d4d4d4 !important;
+  }
+
+  /* Custom colors cho các phần tử cú pháp */
+  .markdown-content pre .token.keyword {
+    color: #569cd6 !important; /* Màu cho từ khóa Python như import, from */
+  }
+
+  .markdown-content pre .token.function {
+    color: #dcdcaa !important; /* Màu cho tên hàm */
+  }
+
+  .markdown-content pre .token.string {
+    color: #ce9178 !important; /* Màu cho chuỗi */
+  }
+
+  .markdown-content pre .token.comment {
+    color: #6a9955 !important; /* Màu cho comment */
+  }
+
+  .markdown-content pre .token.number {
+    color: #b5cea8 !important; /* Màu cho số */
+  }
+
+  .markdown-content pre .token.operator {
+    color: #d4d4d4 !important; /* Màu cho toán tử */
+  }
+
+  .markdown-content pre .token.punctuation {
+    color: #d4d4d4 !important; /* Màu cho dấu câu */
+  }
+
+  .markdown-content pre .token.class-name {
+    color: #4ec9b0 !important; /* Màu cho tên class */
+  }
+
+  .markdown-content pre .token.property {
+    color: #9cdcfe !important; /* Màu cho thuộc tính */
+  }
+
+  /* Đảm bảo line numbers đủ tương phản */
+  .markdown-content pre .linenumber {
+    color: #858585 !important;
+    min-width: 4em !important;
+    padding-right: 1em !important;
+    text-align: right !important;
+    border-right: 1px solid #404040 !important;
+    margin-right: 0.5em !important;
+  }
+
+  /* Cải thiện nút Copy */
+  .markdown-content .group:hover button {
+    opacity: 1 !important;
+  }
+
+  /* Đảm bảo chữ code nhất quán */
+  .markdown-content code {
+    font-family: "Consolas", "Monaco", "Andale Mono", "Ubuntu Mono", monospace !important;
+  }
+}
 :root {
   --font-noto-sans: var(--font-noto-sans), system-ui, sans-serif;
   --font-roboto: var(--font-roboto), system-ui, sans-serif;

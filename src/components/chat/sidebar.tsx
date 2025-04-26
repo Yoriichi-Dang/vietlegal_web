@@ -210,12 +210,12 @@ const Sidebar = () => {
       {/* Overlay chỉ hiển thị khi thỏa mãn tất cả điều kiện */}
       {showOverlay && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm"
+          className=" bg-black/50 backdrop-blur-sm"
           onClick={toggleSidebar}
         />
       )}
 
-      <nav className="flex h-screen relative z-40">
+      <nav className="h-screen">
         {/* Toggle button - always visible outside of sidebar */}
         <SidebarTool isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
 
