@@ -212,7 +212,7 @@ export default function ChatInput() {
   ];
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto mb-10">
       <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-sm">
         {/* Form with textarea */}
         <form onSubmit={handleSubmit}>

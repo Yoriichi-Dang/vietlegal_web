@@ -8,13 +8,19 @@ import rehypeRaw from "rehype-raw";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import { motion } from "framer-motion";
 
 interface ChatMessageProps {
   content: string;
   isUser: boolean;
+  messageId: number | string;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ content, isUser }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({
+  content,
+  isUser,
+  messageId,
+}) => {
   // Add hydration state to ensure markup is consistent client-side
   const [isMounted, setIsMounted] = useState(false);
 
@@ -22,8 +28,36 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ content, isUser }) => {
     setIsMounted(true);
   }, []);
 
+  // Animation variants for the message container
+  const messageVariants = {
+    initial: {
+      opacity: 0,
+      y: 20,
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut",
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.2 },
+    },
+  };
+
   return (
-    <div className={`w-full flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <motion.div
+      className={`w-full flex ${isUser ? "justify-end" : "justify-start"}`}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={messageVariants}
+      key={messageId}
+      layout
+    >
       <div
         className={`${
           isUser
@@ -184,7 +218,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ content, isUser }) => {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
