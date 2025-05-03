@@ -4,17 +4,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import Divider from "@/components/auth/divider";
 import AuthButton from "@/components/auth/button";
 import registerSchema, { RegisterFormData } from "@/schemas/register";
 import PasswordRequirements from "@/components/auth/password-requirements";
 import FormInput from "@/components/auth/input";
-import GoogleIcon from "@/components/icons/google-icon";
+import { toast } from "sonner";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const router = useRouter();
   // Initialize React Hook Form with Zod validation
   const {
     register,
@@ -36,40 +38,38 @@ export default function Register() {
   const password = watch("password");
 
   // Handle form submission
-  const onSubmit = async (data: RegisterFormData) => {
+  const onSubmit = async (formData: RegisterFormData) => {
     setIsLoading(true);
 
     try {
       // Replace this with your actual registration logic
-      console.log("Registration data:", data);
+      const validationResult = registerSchema.safeParse(formData);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (!validationResult.success) {
+        return { error: validationResult.error.flatten().fieldErrors };
+      }
 
-      // Redirect or update state after successful registration
-      window.location.href = "/auth/login";
+      const { name, email, password } = validationResult.data;
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username: name, email, password }),
+        }
+      );
+
+      if (!res.ok) {
+        return { error: "Failed to register" };
+      }
+      toast("Account has been created", {
+        description: "Please login to continue",
+      });
+      console.log("res", res);
     } catch (error) {
       console.error("Registration failed:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle Google registration
-  const handleGoogleRegister = async () => {
-    setIsLoading(true);
-
-    try {
-      // Replace with your Google auth logic
-      console.log("Google registration");
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Redirect after successful registration
-      window.location.href = "/dashboard";
-    } catch (error) {
-      console.error("Google registration failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -191,25 +191,6 @@ export default function Register() {
           {isLoading ? "Creating Account..." : "Sign Me Up!"}
         </AuthButton>
       </form>
-
-      {/* Divider */}
-      <div className="mt-5 sm:mt-6">
-        <Divider />
-
-        {/* Google Sign-up Button */}
-        <div className="mt-3 sm:mt-6">
-          <AuthButton
-            type="button"
-            onClick={handleGoogleRegister}
-            isLoading={isLoading}
-            variant="outline"
-            size="md"
-            icon={<GoogleIcon />}
-          >
-            Register with Google
-          </AuthButton>
-        </div>
-      </div>
 
       {/* Login link */}
       <div className="mt-6 sm:mt-8 text-center">

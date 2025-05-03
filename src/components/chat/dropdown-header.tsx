@@ -118,7 +118,7 @@ const Dropdown: React.FC<DropdownProps> = ({
               {items.map((item, index) => (
                 <React.Fragment key={index}>
                   <button
-                    className="cursor-pointer text-black dark:text-white flex items-center gap-3 px-4 py-3 hover:bg-zinc-100 text-left"
+                    className="cursor-pointer text-black dark:text-white flex items-center gap-3 px-4 py-3 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-left"
                     onClick={() => {
                       item.onClick();
                       setIsDropdownOpen(false);

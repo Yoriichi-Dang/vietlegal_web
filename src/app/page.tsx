@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import ThemeModeToggle from "@/components/ui/theme-mode-toggle";
 import Link from "next/link";
 import { motion } from "framer-motion";
-
+import AuthButton from "@/components/home/auth-button";
 export default function Home() {
   // Animation variants
   const fadeInUp = {
@@ -41,12 +41,9 @@ export default function Home() {
           </div>
         </Link>
         <div className="flex items-center gap-4 md:gap-8">
-          <Button
-            className="rounded-full px-4 md:px-8 py-2 bg-foreground text-background font-semibold hover:opacity-90 transition-colors"
-            variant="outline"
-          >
-            <Link href="/login">Đăng nhập</Link>
-          </Button>
+         
+          <AuthButton />
+
           <ThemeModeToggle />
         </div>
       </motion.div>

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { useEffect, useState } from "react";
@@ -14,6 +16,13 @@ interface ChatMessageProps {
   content: string;
   isUser: boolean;
   messageId: number | string;
+}
+
+// Define a type for the code component props
+interface CodeComponentProps {
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -75,7 +84,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               remarkPlugins={[remarkGfm, remarkMath]}
               rehypePlugins={[rehypeRaw, rehypeKatex]}
               components={{
-                code({ node, inline, className, children, ...props }) {
+                code: (props: any) => {
+                  const { inline, className, children, ...rest } =
+                    props as CodeComponentProps;
                   const match = /language-(\w+)/.exec(className || "");
                   const language = match ? match[1] : "";
 
@@ -101,7 +112,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                         )}
                         <SyntaxHighlighter
                           language={language}
-                          style={vscDarkPlus}
+                          style={vscDarkPlus as any}
                           customStyle={{
                             margin: 0,
                             borderRadius: "0.5rem",
@@ -116,7 +127,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                             language === "cpp"
                           }
                           wrapLines={true}
-                          {...props}
                         >
                           {String(children).replace(/\n$/, "")}
                         </SyntaxHighlighter>
@@ -125,36 +135,36 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   ) : (
                     <code
                       className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono text-sm"
-                      {...props}
+                      {...rest}
                     >
                       {children}
                     </code>
                   );
                 },
                 // Cải thiện hiển thị cho các phần tử khác
-                h1: ({ node, ...props }) => (
+                h1: ({ ...props }) => (
                   <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />
                 ),
-                h2: ({ node, ...props }) => (
+                h2: ({ ...props }) => (
                   <h2 className="text-xl font-bold mt-5 mb-3" {...props} />
                 ),
-                h3: ({ node, ...props }) => (
+                h3: ({ ...props }) => (
                   <h3 className="text-lg font-bold mt-4 mb-2" {...props} />
                 ),
-                h4: ({ node, ...props }) => (
+                h4: ({ ...props }) => (
                   <h4 className="text-base font-bold mt-3 mb-1" {...props} />
                 ),
-                p: ({ node, ...props }) => (
+                p: ({ ...props }) => (
                   <p className="mb-4 last:mb-0 leading-relaxed" {...props} />
                 ),
-                ul: ({ node, ...props }) => (
+                ul: ({ ...props }) => (
                   <ul className="list-disc pl-6 mb-4 space-y-1" {...props} />
                 ),
-                ol: ({ node, ...props }) => (
+                ol: ({ ...props }) => (
                   <ol className="list-decimal pl-6 mb-4 space-y-1" {...props} />
                 ),
-                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                a: ({ node, ...props }) => (
+                li: ({ ...props }) => <li className="mb-1" {...props} />,
+                a: ({ ...props }) => (
                   <a
                     className="text-blue-600 dark:text-blue-400 hover:underline font-medium break-words"
                     target="_blank"
@@ -162,13 +172,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     {...props}
                   />
                 ),
-                blockquote: ({ node, ...props }) => (
+                blockquote: ({ ...props }) => (
                   <blockquote
                     className="border-l-4 border-gray-300 dark:border-gray-500 pl-4 py-1 my-4 text-gray-600 dark:text-gray-300 italic"
                     {...props}
                   />
                 ),
-                table: ({ node, ...props }) => (
+                table: ({ ...props }) => (
                   <div className="overflow-x-auto my-4 rounded-lg">
                     <table
                       className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 overflow-hidden"
@@ -176,31 +186,31 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                     />
                   </div>
                 ),
-                thead: ({ node, ...props }) => (
+                thead: ({ ...props }) => (
                   <thead className="bg-gray-50 dark:bg-zinc-800" {...props} />
                 ),
-                tr: ({ node, ...props }) => (
+                tr: ({ ...props }) => (
                   <tr
                     className="even:bg-gray-50 dark:even:bg-zinc-800/50"
                     {...props}
                   />
                 ),
-                th: ({ node, ...props }) => (
+                th: ({ ...props }) => (
                   <th
                     className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300"
                     {...props}
                   />
                 ),
-                td: ({ node, ...props }) => (
+                td: ({ ...props }) => (
                   <td className="px-4 py-3 text-sm" {...props} />
                 ),
-                hr: ({ node, ...props }) => (
+                hr: ({ ...props }) => (
                   <hr
                     className="my-6 border-gray-200 dark:border-gray-700"
                     {...props}
                   />
                 ),
-                img: ({ node, ...props }) => (
+                img: ({ ...props }) => (
                   <img
                     className="max-w-full h-auto rounded-lg my-4 shadow-sm"
                     {...props}

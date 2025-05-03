@@ -3,7 +3,8 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/provider/theme-provider";
 import { ThemeScript } from "@/components/ui/theme-script";
-
+import { SessionProvider } from "next-auth/react";
+import { Toaster } from "@/components/ui/sonner";
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin"],
@@ -22,19 +23,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${roboto.variable} antialiased`}
-      suppressHydrationWarning={true}
-    >
-      <head>
-        <ThemeScript storageKey="vietlegal-theme" />
-      </head>
-      <body>
-        <ThemeProvider defaultTheme="dark" storageKey="vietlegal-theme">
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+    <SessionProvider>
+      <html
+        lang="en"
+        className={`${roboto.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
+        <head>
+          <ThemeScript storageKey="vietlegal-theme" />
+        </head>
+        <body>
+          <ThemeProvider defaultTheme="dark" storageKey="vietlegal-theme">
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </body>
+      </html>
+    </SessionProvider>
   );
 }

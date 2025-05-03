@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       {
         hostname: "static.vecteezy.com",
       },
+      {
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
   },
 };
