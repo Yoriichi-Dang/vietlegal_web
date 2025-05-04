@@ -9,14 +9,11 @@ import registerSchema, { RegisterFormData } from "@/schemas/register";
 import PasswordRequirements from "@/components/auth/password-requirements";
 import FormInput from "@/components/auth/input";
 import { toast } from "sonner";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const router = useRouter();
   // Initialize React Hook Form with Zod validation
   const {
     register,
@@ -60,16 +57,20 @@ export default function Register() {
           body: JSON.stringify({ username: name, email, password }),
         }
       );
-
+      const data = await res.json();
       if (!res.ok) {
-        return { error: "Failed to register" };
+        toast("Registration failed", {
+          description: data.message,
+        });
       }
       toast("Account has been created", {
         description: "Please login to continue",
       });
-      console.log("res", res);
     } catch (error) {
       console.error("Registration failed:", error);
+      toast("Registration failed", {
+        description: "Please try again",
+      });
     } finally {
       setIsLoading(false);
     }

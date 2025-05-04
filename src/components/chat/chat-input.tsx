@@ -8,18 +8,43 @@ import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
 import Image from "next/image";
 import { useConversation } from "@/provider/conversation-provider";
 
-export default function ChatInput() {
-  const [inputValue, setInputValue] = useState("");
+// Thêm prop 'centered' để xác định vị trí hiển thị
+interface ChatInputProps {
+  centered?: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
+  onSubmit?: (message: string) => Promise<void>;
+}
+
+export default function ChatInput({
+  centered = false,
+  value,
+  onChange,
+  onSubmit,
+}: ChatInputProps) {
+  // Nếu không có prop từ bên ngoài, sử dụng state nội bộ
+  const [localInputValue, setLocalInputValue] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [model, setModel] = useState("model");
 
-  // Use conversation context
-  const { sendMessage, isLoading } = useConversation();
+  // Use conversation context nếu không có prop onSubmit
+  const { sendMessage: contextSendMessage, isLoading: contextIsLoading } =
+    useConversation();
+
+  // Sử dụng prop value hoặc state nội bộ
+  const inputValue = value !== undefined ? value : localInputValue;
+  const isLoading = contextIsLoading;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setInputValue(value);
+    const newValue = e.target.value;
+
+    // Cập nhật giá trị qua prop hoặc state nội bộ
+    if (onChange) {
+      onChange(newValue);
+    } else {
+      setLocalInputValue(newValue);
+    }
 
     // Reset error message khi người dùng tiếp tục nhập
     if (submitError) {
@@ -38,11 +63,19 @@ export default function ChatInput() {
     if (!inputValue.trim() || isLoading) return;
 
     try {
-      // Send message through conversation provider
-      await sendMessage(inputValue);
+      // Sử dụng onSubmit từ props hoặc sendMessage từ context
+      if (onSubmit) {
+        await onSubmit(inputValue);
+      } else {
+        await contextSendMessage(inputValue);
+      }
 
-      // Reset form
-      setInputValue("");
+      // Reset form nếu sử dụng state nội bộ
+      if (!onChange) {
+        setLocalInputValue("");
+      }
+
+      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -66,6 +99,32 @@ export default function ChatInput() {
     // Nếu nhấn Shift+Enter thì sẽ xuống dòng bình thường (không cần xử lý gì thêm)
   };
 
+  // Style variants để animation
+  const containerVariants = {
+    centered: {
+      width: "100%",
+      maxWidth: "800px",
+      scale: 1.05,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        duration: 0.7,
+      },
+    },
+    bottom: {
+      width: "100%",
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        duration: 0.7,
+      },
+    },
+  };
+
+  // Tool items
   const toolItems: DropdownItem[] = [
     {
       id: "google-drive",
@@ -181,6 +240,7 @@ export default function ChatInput() {
       action: () => console.log("Upload from computer clicked"),
     },
   ];
+
   // Define model dropdown items
   const modelItems: DropdownItem[] = [
     {
@@ -212,8 +272,22 @@ export default function ChatInput() {
   ];
 
   return (
-    <div className="max-w-3xl mx-auto mb-10">
-      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-sm">
+    <motion.div
+      className={cn(
+        "max-w-3xl mx-auto mb-10",
+        centered ? "max-w-2xl" : "max-w-3xl"
+      )}
+      variants={containerVariants}
+      initial={false}
+      animate={centered ? "centered" : "bottom"}
+      transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <div
+        className={cn(
+          "bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700/50",
+          centered ? "transform-gpu" : ""
+        )}
+      >
         {/* Form with textarea */}
         <form onSubmit={handleSubmit}>
           <div className="relative">
@@ -222,12 +296,15 @@ export default function ChatInput() {
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Enter your message here..."
+              placeholder={
+                centered ? "Hỏi điều gì đó..." : "Enter your message here..."
+              }
               className={cn(
                 "w-full border-0 rounded-xl px-4 py-3 resize-none",
                 "dark:text-white text-black placeholder-zinc-400",
                 "focus:outline-none focus:ring-0",
-                "min-h-[44px] max-h-[150px]"
+                "min-h-[44px] max-h-[150px]",
+                "text-base"
               )}
               rows={1}
               disabled={isLoading}
@@ -273,15 +350,15 @@ export default function ChatInput() {
                   "p-2 rounded-full transition-colors relative",
                   inputValue.trim() && !isLoading
                     ? "bg-primary text-white hover:bg-primary/90"
-                    : "dark:bg-zinc-800 bg-zinc-100 text-zinc-500 cursor-not-allowed"
+                    : "dark:bg-zinc-800 ring-2 ring-zinc-200 dark:ring-zinc-700/50 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}
               >
                 {isLoading ? (
                   <span className="block w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
                 ) : (
                   <svg
-                    width="18"
-                    height="18"
+                    width={centered ? "20" : "18"}
+                    height={centered ? "20" : "18"}
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
@@ -300,6 +377,6 @@ export default function ChatInput() {
           </div>
         </form>
       </div>
-    </div>
+    </motion.div>
   );
 }

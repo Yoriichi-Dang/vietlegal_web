@@ -13,7 +13,7 @@ const AuthButton = () => {
   if (!session) {
     return (
       <Button
-        className="rounded-full px-4 md:px-8 py-2 bg-foreground text-background font-semibold hover:opacity-90 transition-colors"
+        className="cursor-pointer rounded-full px-4 md:px-8 py-2 bg-foreground text-background font-semibold hover:opacity-90 transition-colors"
         variant="outline"
       >
         <Link href="/login">Đăng nhập</Link>
@@ -22,7 +22,7 @@ const AuthButton = () => {
   }
   return (
     <Button
-      className="rounded-full px-4 md:px-8 py-2 bg-foreground text-background font-semibold hover:opacity-90 transition-colors"
+      className="rounded-full cursor-pointer px-4 md:px-8 py-2 bg-foreground text-background font-semibold hover:opacity-90 transition-colors"
       variant="outline"
       onClick={() => router.push("/new")}
     >

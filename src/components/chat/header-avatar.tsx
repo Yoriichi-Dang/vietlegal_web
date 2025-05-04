@@ -11,9 +11,10 @@ import Image from "next/image";
 import useOutsideClick from "@/hooks/useOutsideClick"; // Using your existing hook
 import Dropdown from "./dropdown-header";
 import { signOut, useSession } from "next-auth/react";
+import SettingDialog from "./setting-dialog";
 const HeaderAvatar = () => {
   const { data: session } = useSession();
-  console.log("session", session);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   // Use your existing useOutsideClick hook
@@ -34,7 +35,7 @@ const HeaderAvatar = () => {
     {
       icon: <Settings size={18} />,
       label: "Settings",
-      onClick: () => console.log("Settings clicked"),
+      onClick: () => setIsDialogOpen(true),
       hasDivider: true,
     },
     {
@@ -61,6 +62,10 @@ const HeaderAvatar = () => {
       >
         <EllipsisVertical />
       </Dropdown>
+      <SettingDialog
+        isDialogOpen={isDialogOpen}
+        setIsDialogOpen={setIsDialogOpen}
+      />
       <Dropdown
         triggerClassName="text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/50 p-2 rounded-md"
         items={profileDropdownItems}

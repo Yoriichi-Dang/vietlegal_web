@@ -44,7 +44,7 @@ const ThemeModeToggle = () => {
     <Button
       variant="ghost"
       size="icon"
-      className="p-2 border-2 border-foreground rounded-full"
+      className="p-2 cursor-pointer border-2 border-foreground rounded-full"
       onClick={toggleTheme}
       aria-label="Toggle theme"
     >
