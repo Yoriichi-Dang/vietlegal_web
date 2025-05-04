@@ -6,6 +6,10 @@ import MenuIcon from "../icons/menu-icon";
 import { Search } from "lucide-react";
 import { useEffect } from "react";
 import { useState } from "react";
+import { useConversation } from "@/provider/conversation-provider";
+import { useRouter } from "next/navigation";
+import { useChatState } from "@/hooks/useChatState";
+
 const SidebarTool = ({
   isCollapsed,
   toggleSidebar,
@@ -14,6 +18,9 @@ const SidebarTool = ({
   toggleSidebar: () => void;
 }) => {
   const [isMobile, setIsMobile] = useState(false);
+  const { createNewConversation } = useConversation();
+  const router = useRouter();
+  const { resetChatState } = useChatState();
 
   // Kiểm tra kích thước màn hình khi component được render
   useEffect(() => {
@@ -30,6 +37,35 @@ const SidebarTool = ({
     // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
+
+  // Xử lý sự kiện khi nhấn vào nút New Chat
+  const handleNewChat = async () => {
+    try {
+      // Reset trạng thái chat để hiển thị giao diện nhập tin nhắn đầu tiên
+      console.log("[DEBUG - handleNewChat] Starting to create a new chat");
+      resetChatState();
+
+      // Tạo cuộc trò chuyện mới
+      console.log("[DEBUG - handleNewChat] Creating new conversation");
+      const newConv = await createNewConversation("New Conversation");
+      console.log(
+        "[DEBUG - handleNewChat] New conversation created with ID:",
+        newConv.id
+      );
+
+      // Điều hướng đến trang mới
+      console.log("[DEBUG - handleNewChat] Navigating to /new");
+      router.push("/new");
+
+      console.log("[DEBUG - handleNewChat] New chat process completed");
+    } catch (error) {
+      console.error(
+        "[DEBUG - handleNewChat] Error creating new conversation:",
+        error
+      );
+    }
+  };
+
   const newChatButtonVariants = {
     expanded: {
       left: isMobile ? "13rem" : "13rem",
@@ -136,6 +172,7 @@ const SidebarTool = ({
         animate={isCollapsed ? "collapsed" : "expanded"}
         whileHover="hover"
         whileTap="tap"
+        onClick={handleNewChat}
         className={cn(
           "absolute cursor-pointer z-10 p-1.5 rounded-md",
           "hover:bg-gray-200 dark:hover:bg-gray-800/50 flex items-center justify-center w-10 h-10",

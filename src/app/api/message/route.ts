@@ -55,27 +55,69 @@ export async function POST(request: Request) {
     // 4. So sánh để kiểm tra xem dữ liệu có thay đổi không
     const hasBeenModified = originalData !== JSON.stringify(sanitizedData);
     console.log(hasBeenModified);
-    // 6. Gửi dữ liệu đã được làm sạch tới API khác
-    // Ví dụ sử dụng fetch để gửi dữ liệu tới API khác
-    // const apiResponse = await fetch("https://your-external-api.com/endpoint", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     // Có thể thêm các headers cần thiết khác như Authorization
-    //   },
-    //   body: JSON.stringify(sanitizedData),
-    // });
 
-    // if (!apiResponse.ok) {
-    //   throw new Error(
-    //     `External API responded with status: ${apiResponse.status}`
-    //   );
-    // }
+    // Kiểm tra nếu là tin nhắn đầu tiên
+    const isFirstMessage = sanitizedData.isFirstMessage === true;
+
     // Fix 1: Ensure the content is a string
     const content =
       typeof sanitizedData === "object"
         ? JSON.stringify(sanitizedData)
         : sanitizedData;
+
+    // Nếu là tin nhắn đầu tiên, thêm yêu cầu tạo tiêu đề
+    let suggestedTitle = "";
+    if (isFirstMessage) {
+      console.log(
+        "Creating title for first message with content:",
+        sanitizedData.message
+      );
+      try {
+        // Gọi API OpenAI để tạo tiêu đề
+        const titleCompletion = await client.chat.completions.create({
+          model: "gpt-4o-mini", // Dùng model nhỏ hơn cho việc tạo tiêu đề
+          messages: [
+            {
+              role: "system",
+              content:
+                "Bạn là một trợ lý có nhiệm vụ tạo tiêu đề ngắn gọn cho cuộc trò chuyện. Hãy tạo một tiêu đề ngắn gọn (không quá 30 ký tự) bằng tiếng Việt dựa trên nội dung tin nhắn đầu tiên của người dùng. Tiêu đề phải súc tích, thể hiện được chủ đề chính của tin nhắn và không được có dấu ngoặc kép. Chỉ trả về tiêu đề, không cần thêm bất kỳ thông tin nào khác.",
+            },
+            {
+              role: "user",
+              content: sanitizedData.message || "",
+            },
+          ],
+          max_tokens: 50,
+          temperature: 0.7,
+        });
+
+        suggestedTitle =
+          titleCompletion.choices[0].message.content?.trim() || "";
+        console.log("Generated title from OpenAI:", suggestedTitle);
+
+        // Nếu vì lý do nào đó title trống, sử dụng phương pháp dự phòng
+        if (!suggestedTitle) {
+          suggestedTitle =
+            sanitizedData.message?.substring(0, 30) +
+              (sanitizedData.message?.length > 30 ? "..." : "") ||
+            "Cuộc trò chuyện mới";
+          console.log(
+            "Generated title is empty, using fallback:",
+            suggestedTitle
+          );
+        }
+      } catch (error) {
+        console.error("Error generating title:", error);
+        // Nếu có lỗi, sử dụng một phần nội dung tin nhắn làm tiêu đề
+        suggestedTitle =
+          sanitizedData.message?.substring(0, 30) +
+            (sanitizedData.message?.length > 30 ? "..." : "") ||
+          "Cuộc trò chuyện mới";
+        console.log("Error generating title, using fallback:", suggestedTitle);
+      }
+    }
+
+    // Tiếp tục xử lý tin nhắn bình thường
     const completion = await client.chat.completions.create({
       model: "gpt-4.1",
       messages: [
@@ -93,21 +135,50 @@ export async function POST(request: Request) {
 
     // Parse the JSON response from OpenAI
     let aiResponseData;
+    let responseContent = completion.choices[0].message.content || "";
+
+    // Kiểm tra và bọc code C++ không được định dạng đúng
+    // Xác định code C++ dựa trên các pattern phổ biến
+    const cppPatterns = [
+      /#include\s*</, // #include <...>
+      /using namespace std;/,
+      /int main\(\)/,
+      /std::/,
+      /vector<.+>/,
+      /iostream>/,
+    ];
+
+    const hasCppPattern = cppPatterns.some((pattern) =>
+      pattern.test(responseContent)
+    );
+    if (hasCppPattern && !responseContent.includes("```")) {
+      // Thêm thẻ code block nếu phát hiện code C++ chưa được định dạng
+      responseContent = "```cpp\n" + responseContent + "\n```";
+    }
+
     try {
-      aiResponseData = JSON.parse(
-        completion.choices[0].message.content || "{}"
-      );
+      aiResponseData = JSON.parse(responseContent || "{}");
     } catch (error) {
       console.error("Error parsing AI response as JSON:", error);
-      aiResponseData = { raw: completion.choices[0].message.content };
+      aiResponseData = { raw: responseContent };
     }
     console.log(aiResponseData);
-    // Return the structured response
-    return NextResponse.json({
-      response: completion.choices[0].message.content || "",
-      status: "success",
-      timestamp: new Date().toISOString(),
-    });
+
+    // Return the structured response, including suggested title if this is the first message
+    if (isFirstMessage) {
+      return NextResponse.json({
+        response: responseContent,
+        title: suggestedTitle,
+        status: "success",
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      return NextResponse.json({
+        response: responseContent,
+        status: "success",
+        timestamp: new Date().toISOString(),
+      });
+    }
   } catch (error) {
     console.error("Error processing request:", error);
 

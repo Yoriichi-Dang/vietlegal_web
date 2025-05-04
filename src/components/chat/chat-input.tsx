@@ -360,8 +360,8 @@ export default function ChatInput({
                     : "dark:bg-zinc-800 ring-2 ring-zinc-200 dark:ring-zinc-700/50 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}
               >
-                {isLoading ? (
-                  <span className="block w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></span>
+                {isLoading || disabled ? (
+                  <span className="block w-5 h-5 border-2 border-t-transparent border-white dark:border-zinc-500 dark:border-t-transparent rounded-full animate-spin"></span>
                 ) : (
                   <svg
                     width={centered ? "20" : "18"}

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MoreVertical, Trash, Edit, Share } from "lucide-react";
 import useOutsideClick from "@/hooks/useOutsideClick";
+import { useConversation } from "@/provider/conversation-provider";
 
 type Props = {
   id: string;
@@ -20,8 +21,11 @@ const SidebarChatItem = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { activeConversation, conversations, setActiveConversation } =
+    useConversation();
 
   const isDropdownOpen = activeDropdownId === id;
+  const isActive = activeConversation?.id === id;
 
   const itemVariants = {
     hidden: {
@@ -91,8 +95,26 @@ const SidebarChatItem = ({
       setActiveDropdownId(null);
     }
 
-    // Handle item click (e.g., navigate to chat)
-    console.log(`Clicked on chat: ${id}`);
+    // Tìm conversation theo id và đặt làm active
+    const conversation = conversations.find((conv) => conv.id === id);
+    console.log("Clicked conversation:", id, name);
+    console.log("Found conversation:", conversation);
+
+    if (conversation) {
+      setActiveConversation(conversation);
+      console.log("Set as active conversation:", conversation.title);
+
+      // Cập nhật URL nếu chúng ta đang ở trang chi tiết cuộc trò chuyện
+      if (typeof window !== "undefined") {
+        const newUrl = `/c/${id}`;
+        window.history.pushState(
+          { ...window.history.state, as: newUrl, url: newUrl },
+          "",
+          newUrl
+        );
+        console.log("Updated URL to:", newUrl);
+      }
+    }
   };
 
   return (
@@ -101,7 +123,8 @@ const SidebarChatItem = ({
       className={cn(
         "flex items-center gap-3 py-2 px-3 rounded-md cursor-pointer group relative",
         "hover:bg-gray-100 dark:hover:bg-zinc-800",
-        isDropdownOpen ? "bg-gray-100 dark:bg-zinc-800" : ""
+        isDropdownOpen ? "bg-gray-100 dark:bg-zinc-800" : "",
+        isActive ? "bg-gray-200 dark:bg-zinc-700" : ""
       )}
       onContextMenu={handleContextMenu}
       onMouseEnter={() => setShowContextMenu(true)}

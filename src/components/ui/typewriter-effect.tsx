@@ -179,49 +179,58 @@ export const TypewriterEffect: React.FC<TypewriterEffectProps> = ({
               const match = /language-(\w+)/.exec(className || "");
               const language = match ? match[1] : "";
 
-              return !inline && language ? (
-                <div className="relative group my-4">
-                  <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10">
-                    <button
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          String(children).replace(/\n$/, "")
-                        )
-                      }
-                      className="bg-gray-700/70 hover:bg-gray-700/90 text-white text-xs py-1 px-2 rounded"
-                    >
-                      Copy
-                    </button>
+              // Lấy nội dung code và loại bỏ dấu xuống dòng cuối cùng nếu có
+              const codeContent = String(children).replace(/\n$/, "");
+
+              // Xử lý hiển thị code block
+              if (!inline && language) {
+                return (
+                  <div className="relative group my-4">
+                    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10">
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(codeContent)
+                        }
+                        className="bg-gray-700/70 hover:bg-gray-700/90 text-white text-xs py-1 px-2 rounded"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <div className="text-left">
+                      {language && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-4 py-1 border-b dark:border-zinc-700 border-zinc-200">
+                          {language}
+                        </div>
+                      )}
+                      <SyntaxHighlighter
+                        language={language}
+                        style={vscDarkPlus as any}
+                        customStyle={{
+                          margin: 0,
+                          borderRadius: "0.5rem",
+                          fontSize: "0.9rem",
+                          lineHeight: "1.5",
+                          padding: "1rem",
+                        }}
+                        showLineNumbers={
+                          language === "javascript" ||
+                          language === "python" ||
+                          language === "java" ||
+                          language === "cpp"
+                        }
+                        wrapLines={true}
+                        PreTag="div"
+                        useInlineStyles={true}
+                      >
+                        {codeContent}
+                      </SyntaxHighlighter>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    {language && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 px-4 py-1 border-b dark:border-zinc-700 border-zinc-200">
-                        {language}
-                      </div>
-                    )}
-                    <SyntaxHighlighter
-                      language={language}
-                      style={vscDarkPlus as any}
-                      customStyle={{
-                        margin: 0,
-                        borderRadius: "0.5rem",
-                        fontSize: "0.9rem",
-                        lineHeight: "1.5",
-                        padding: "1rem",
-                      }}
-                      showLineNumbers={
-                        language === "javascript" ||
-                        language === "python" ||
-                        language === "java" ||
-                        language === "cpp"
-                      }
-                      wrapLines={true}
-                    >
-                      {String(children).replace(/\n$/, "")}
-                    </SyntaxHighlighter>
-                  </div>
-                </div>
-              ) : (
+                );
+              }
+
+              // Xử lý inline code
+              return (
                 <code
                   className="bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono text-sm"
                   {...rest}

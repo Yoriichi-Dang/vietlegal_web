@@ -7,6 +7,8 @@ import ChatContainerAnimated from "@/components/chat/chat-container-animated";
 import { useConversation } from "@/provider/conversation-provider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { useChatState } from "@/hooks/useChatState";
 
 // Create a chat component that will consume the conversation context
 const ChatContent = () => {
@@ -23,10 +25,11 @@ const ChatContent = () => {
   const [inputValue, setInputValue] = useState(""); // Để theo dõi giá trị input
   const [isLoading, setIsLoading] = useState(true); // State cho loading indicator
   const [isTypingComplete, setIsTypingComplete] = useState(true); // State để kiểm tra nếu đã hoàn tất hiệu ứng đánh máy
+  const pathname = usePathname(); // Lấy path hiện tại
 
-  // State để kiểm tra nếu đã gửi tin nhắn đầu tiên
-  const [hasSubmittedFirstMessage, setHasSubmittedFirstMessage] =
-    useState(false);
+  // Sử dụng hook useChatState thay vì state cục bộ
+  const { hasSubmittedFirstMessage, setHasSubmittedFirstMessage } =
+    useChatState();
 
   // Kiểm tra xem có phải là cuộc trò chuyện mới không
   const isNewConversation =
@@ -34,16 +37,34 @@ const ChatContent = () => {
     activeConversation.title === "New Conversation" ||
     conversationMessages.length === 0;
 
+  // Thêm useEffect để theo dõi khi conversationMessages thay đổi và cập nhật URL
+  useEffect(() => {
+    // Chỉ thực hiện khi có activeConversation và có id
+    if (
+      activeConversation?.id &&
+      pathname === "/new" &&
+      conversationMessages.length > 0
+    ) {
+      // Thay đổi URL mà không gây reload trang
+      const newUrl = `/c/${activeConversation.id}`;
+      window.history.pushState(
+        { ...window.history.state, as: newUrl, url: newUrl },
+        "",
+        newUrl
+      );
+    }
+  }, [activeConversation?.id, conversationMessages.length, pathname]);
+
   // Thiết lập loading
   useEffect(() => {
     // Đảm bảo tất cả component đã load xong
     let timeoutId: NodeJS.Timeout;
 
     if (sessionStatus !== "loading") {
-      // Sử dụng thời gian tối thiểu là 800ms để đảm bảo các component đã render
+      // Sử dụng thời gian tối thiểu để đảm bảo các component đã render
       timeoutId = setTimeout(() => {
         setIsLoading(false);
-      }, 500);
+      }, 200); // Giảm thời gian chờ
     }
 
     return () => {
@@ -103,9 +124,15 @@ const ChatContent = () => {
     // Đặt trạng thái đang hiển thị hiệu ứng
     setIsTypingComplete(false);
 
-    // Gửi tin nhắn thông qua provider
-    await sendMessage(inputMsg);
-    setInputValue("");
+    try {
+      // Gửi tin nhắn trực tiếp, để hàm sendMessage xử lý việc tạo conversation nếu cần
+      console.log("Sending message:", inputMsg);
+      await sendMessage(inputMsg);
+      setInputValue("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setIsTypingComplete(true);
+    }
   };
 
   // Hiển thị loading spinner khi đang tải

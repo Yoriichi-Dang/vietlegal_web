@@ -12,96 +12,13 @@ interface ConversationContextType {
   setActiveConversation: (conversation: Conversation) => void;
   sendMessage: (content: string) => Promise<void>;
   createNewConversation: (title?: string) => Promise<Conversation>;
+  loadConversation: (id: string) => Promise<void>;
 }
 
 // Create context with default values
 const ConversationContext = createContext<ConversationContextType | undefined>(
   undefined
 );
-
-// Sample data for conversations (simulate API response)
-const sampleConversations: Conversation[] = [
-  {
-    id: "1",
-    title: "Thần số học Đặng Hoàng Nguyên",
-    messages: [],
-    participants: [{ id: "user-1", name: "User" }],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    title: "Mô tả bạn thân",
-    messages: [],
-    participants: [{ id: "user-1", name: "User" }],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    title: "Công cụ generate file tự động",
-    messages: [],
-    participants: [{ id: "user-1", name: "User" }],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
-
-// Sample messages by conversation (simulate API response)
-const conversationMessages: Record<string, Message[]> = {
-  "1": [
-    {
-      id: 1,
-      content: "Giải thích cho tôi về thần số học",
-      isUser: true,
-      timestamp: new Date(Date.now() - 3600000),
-    },
-    {
-      id: 2,
-      content:
-        "Thần số học là một hệ thống tin rằng con số có ý nghĩa đặc biệt và có thể ảnh hưởng đến cuộc sống con người...",
-      isUser: false,
-      timestamp: new Date(Date.now() - 3500000),
-    },
-  ],
-  "2": [
-    {
-      id: 3,
-      content:
-        "Minh mixes casual streetwear with a touch of retro flair, often throwing on a bomber jacket over a simple tee and topping it off with his signature messy hair and confident smile.",
-      isUser: true,
-      timestamp: new Date(Date.now() - 2600000),
-    },
-    {
-      id: 4,
-      content: "Dưới đây là bản dịch tiếng Việt của đoạn bạn yêu cầu:",
-      isUser: false,
-      timestamp: new Date(Date.now() - 2500000),
-    },
-    {
-      id: 5,
-      content:
-        "Minh kết hợp phong cách đường phố giản dị với chút hơi hướng cổ điển, thường khoác áo khoác bomber bên ngoài áo phông đơn giản và hoàn thiện với mái tóc rối đặc trưng cùng nụ cười tự tin.",
-      isUser: false,
-      timestamp: new Date(Date.now() - 2400000),
-    },
-  ],
-  "3": [
-    {
-      id: 6,
-      content: "Giúp tôi tạo một tool tự động sinh file config",
-      isUser: true,
-      timestamp: new Date(Date.now() - 1600000),
-    },
-    {
-      id: 7,
-      content:
-        "Để tạo một công cụ tự động sinh file config, bạn có thể sử dụng các phương pháp sau...",
-      isUser: false,
-      timestamp: new Date(Date.now() - 1500000),
-    },
-  ],
-};
 
 export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -120,7 +37,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Set sample conversations
-      setConversations(sampleConversations);
+      setConversations([]);
       setIsLoading(false);
     };
 
@@ -136,8 +53,16 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
       // Simulate API call to fetch messages for this conversation
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Get messages for this conversation from sample data
-      const conversationData = conversationMessages[conversation.id] || [];
+      // Get messages for this conversation từ fetched data
+      // Trong tương lai, sẽ fetch từ API thay vì sử dụng dữ liệu mẫu
+      // const conversationData = conversations[conversation.id] || [];
+      // Fix lỗi TypeScript bằng cách sử dụng cách tiếp cận khác
+      const conversationData: Message[] = []; // Đặt mảng rỗng cho messages ban đầu
+      // Trong tương lai, sẽ fetch messages từ API
+      // fetch(`/api/conversations/${conversation.id}/messages`)
+      // .then(res => res.json())
+      // .then(data => setMessages(data))
+
       setMessages(conversationData);
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -151,6 +76,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     title?: string
   ): Promise<Conversation> => {
     setIsLoading(true);
+    console.log(
+      "[DEBUG - createNewConversation] Creating new conversation with title:",
+      title
+    );
 
     try {
       // Simulate API call
@@ -167,8 +96,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         updatedAt: new Date(),
       };
 
-      // Update conversations list
-      setConversations((prev) => [newConversation, ...prev]);
+      console.log(
+        "[DEBUG - createNewConversation] New conversation created with ID:",
+        newId
+      );
 
       // Set as active
       setActiveConversation(newConversation);
@@ -190,11 +121,40 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
 
     try {
-      // If no active conversation, create one
+      // Nếu không có activeConversation, tạo một conversation mới
       if (!activeConversation) {
+        console.log(
+          "[DEBUG - sendMessage] No active conversation, creating a new one"
+        );
         const newConv = await createNewConversation("New Conversation");
+        console.log(
+          "[DEBUG - sendMessage] Created new conversation with ID:",
+          newConv.id,
+          "and title:",
+          newConv.title
+        );
+
+        // Thêm conversation mới vào danh sách ngay lập tức để đảm bảo nó xuất hiện trong sidebar
+        // Chỉ làm điều này khi là tin nhắn đầu tiên của người dùng (khi chưa có activeConversation)
+        setConversations((prev) => {
+          console.log(
+            "[DEBUG - sendMessage] Adding new conversation to list temporarily:",
+            newConv.id
+          );
+          // Thêm conversation mới vào đầu danh sách
+          return [newConv, ...prev];
+        });
+
+        // Sử dụng conversation mới tạo thay vì dựa vào activeConversation đã được cập nhật
         await handleSendMessageToApi(newConv.id, content);
       } else {
+        // Nếu đã có activeConversation, sử dụng nó
+        console.log(
+          "[DEBUG - sendMessage] Using existing conversation:",
+          activeConversation.id,
+          "with title:",
+          activeConversation.title
+        );
         await handleSendMessageToApi(activeConversation.id, content);
       }
     } catch (error) {
@@ -219,8 +179,29 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         timestamp: new Date(),
       };
 
+      // Tính số lượng tin nhắn trước khi thêm tin nhắn mới
+      const currentMessageCount = messages.length;
+
       // Add to messages
       setMessages((prev) => [...prev, userMessage]);
+
+      // Kiểm tra xem đây có phải là tin nhắn đầu tiên không
+      // Một conversation được xem là mới nếu chưa có message và title vẫn là mặc định
+      const isFirstMessage =
+        (activeConversation?.title === "New Conversation" ||
+          !activeConversation?.title) &&
+        currentMessageCount === 0;
+
+      console.log(
+        "[DEBUG - handleSendMessageToApi] Sending message - isFirstMessage:",
+        isFirstMessage,
+        "title:",
+        activeConversation?.title,
+        "messages.length:",
+        currentMessageCount,
+        "conversation ID:",
+        conversationId
+      );
 
       // 2. Create message data for API
       const messageData = {
@@ -228,6 +209,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         model: "gpt-4o-mini", // Default model
         timestamp: new Date().toISOString(),
         conversationId,
+        isFirstMessage, // Thêm flag để API biết đây là tin nhắn đầu tiên
       };
 
       // 3. Send to API
@@ -245,6 +227,8 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // 4. Parse response
       const result = await response.json();
+      console.log("[DEBUG - handleSendMessageToApi] API response:", result);
+
       // 5. Create assistant message
       const assistantMessage: Message = {
         id: userMessageId + 1,
@@ -257,19 +241,126 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
       setMessages((prev) => [...prev, assistantMessage]);
 
       // 7. Update conversation if it's new
-      if (activeConversation?.title === "New Conversation") {
+      if (isFirstMessage && activeConversation) {
+        // Sử dụng title được đề xuất từ API nếu có, nếu không thì sử dụng phương pháp cũ
+        let newTitle = "New Conversation";
+
+        if (result.title) {
+          newTitle = result.title;
+          console.log(
+            "[DEBUG - handleSendMessageToApi] Using title from API:",
+            newTitle
+          );
+        } else {
+          newTitle =
+            content.substring(0, 30) + (content.length > 30 ? "..." : "");
+          console.log(
+            "[DEBUG - handleSendMessageToApi] Using fallback title:",
+            newTitle
+          );
+        }
+
+        console.log(
+          "[DEBUG - handleSendMessageToApi] Updating conversation title to:",
+          newTitle
+        );
+
         const updatedConversation = {
           ...activeConversation,
-          title: content.substring(0, 30) + (content.length > 30 ? "..." : ""),
+          title: newTitle,
           updatedAt: new Date(),
         };
 
+        // Cập nhật active conversation trước
         setActiveConversation(updatedConversation);
-        setConversations((prev) =>
-          prev.map((conv) =>
-            conv.id === updatedConversation.id ? updatedConversation : conv
-          )
-        );
+        console.log("Active conversation updated with title:", newTitle);
+
+        // Thêm một trễ nhỏ trước khi cập nhật danh sách conversation để đảm bảo UI cập nhật
+        setTimeout(() => {
+          // Cập nhật danh sách conversations và thêm conversation vào danh sách
+          setConversations((prev) => {
+            // Kiểm tra xem conversation đã tồn tại trong danh sách chưa
+            const existingIndex = prev.findIndex(
+              (conv) => conv.id === updatedConversation.id
+            );
+
+            console.log(
+              "Checking if conversation exists in list. Existing index:",
+              existingIndex
+            );
+            console.log(
+              "Current conversations in list:",
+              prev.map((c) => ({ id: c.id, title: c.title }))
+            );
+
+            if (existingIndex >= 0) {
+              // Nếu đã tồn tại, cập nhật nó
+              const updated = [...prev];
+              updated[existingIndex] = updatedConversation;
+              console.log(
+                "Updated existing conversation in list:",
+                updated.map((c) => ({ id: c.id, title: c.title }))
+              );
+              return updated;
+            } else {
+              // Nếu chưa tồn tại, thêm mới vào đầu danh sách
+              console.log(
+                "Adding new conversation to list with ID:",
+                updatedConversation.id
+              );
+              const newList = [updatedConversation, ...prev];
+              console.log(
+                "New conversations list:",
+                newList.map((c) => ({ id: c.id, title: c.title }))
+              );
+              return newList;
+            }
+          });
+
+          console.log(
+            "Conversation list updated with:",
+            updatedConversation.id,
+            updatedConversation.title
+          );
+
+          // Thêm một lần cập nhật thứ hai để đảm bảo state đã được áp dụng
+          setTimeout(() => {
+            setConversations((prev) => {
+              console.log(
+                "Performing second update check for conversation list"
+              );
+              // Kiểm tra xem conversation đã thực sự được thêm vào danh sách chưa
+              const existingConv = prev.find(
+                (conv) => conv.id === updatedConversation.id
+              );
+
+              if (!existingConv) {
+                console.log(
+                  "Conversation still not in list, forcing update:",
+                  updatedConversation.id
+                );
+                return [updatedConversation, ...prev];
+              }
+
+              // Nếu đã tồn tại nhưng title chưa được cập nhật đúng
+              if (existingConv.title !== updatedConversation.title) {
+                console.log("Conversation title needs update, forcing update");
+                return prev.map((conv) =>
+                  conv.id === updatedConversation.id
+                    ? updatedConversation
+                    : conv
+                );
+              }
+
+              console.log(
+                "Conversation is properly updated, no changes needed"
+              );
+              return prev;
+            });
+          }, 300);
+        }, 200); // Tăng Delay lên 200ms
+
+        console.log("Conversation update scheduled:", updatedConversation);
       }
     } catch (error) {
       console.error("Error handling message:", error);
@@ -286,6 +377,41 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Load a specific conversation by ID
+  const loadConversation = async (id: string) => {
+    console.log("Loading conversation with ID:", id);
+    setIsLoading(true);
+
+    try {
+      // Trong tương lai sẽ gọi API để lấy dữ liệu conversation
+      // const response = await fetch(`/api/conversations/${id}`);
+      // const data = await response.json();
+
+      // Tạm thời, tìm conversation trong state hiện tại
+      const conversation = conversations.find((conv) => conv.id === id);
+
+      if (conversation) {
+        // Nếu tìm thấy, đặt làm active conversation
+        setActiveConversation(conversation);
+
+        // Giả lập lấy messages
+        // Trong tương lai sẽ gọi API để lấy messages
+        const messages: Message[] = []; // Tạm thời để trống, sau sẽ gọi API
+        setMessages(messages);
+
+        console.log("Loaded conversation:", conversation);
+      } else {
+        // Nếu không tìm thấy, có thể tạo mới hoặc hiển thị thông báo lỗi
+        console.error("Conversation not found with ID:", id);
+        // Có thể chuyển hướng hoặc tạo mới tùy vào yêu cầu
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const contextValue = {
     conversations,
     activeConversation,
@@ -294,6 +420,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     setActiveConversation: handleSetActiveConversation,
     sendMessage,
     createNewConversation,
+    loadConversation,
   };
 
   return (
