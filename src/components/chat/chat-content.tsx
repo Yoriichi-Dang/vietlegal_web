@@ -64,7 +64,7 @@ const ChatContent = () => {
       // Sử dụng thời gian tối thiểu để đảm bảo các component đã render
       timeoutId = setTimeout(() => {
         setIsLoading(false);
-      }, 200); // Giảm thời gian chờ
+      }, 100); // Giảm thời gian chờ
     }
 
     return () => {
