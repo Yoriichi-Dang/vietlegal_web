@@ -3,7 +3,7 @@ import ChatInput from "@/components/chat/chat-input";
 import HeaderAvatar from "@/components/chat/header-avatar";
 import Sidebar from "@/components/chat/sidebar";
 import React, { useEffect, useRef, useState } from "react";
-import ChatContainer from "@/components/chat/chat-container";
+import ChatContainerAnimated from "@/components/chat/chat-container-animated";
 import { useConversation } from "@/provider/conversation-provider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,7 @@ const ChatContent = () => {
   const [prevMessagesLength, setPrevMessagesLength] = useState(0);
   const [inputValue, setInputValue] = useState(""); // Để theo dõi giá trị input
   const [isLoading, setIsLoading] = useState(true); // State cho loading indicator
+  const [isTypingComplete, setIsTypingComplete] = useState(true); // State để kiểm tra nếu đã hoàn tất hiệu ứng đánh máy
 
   // State để kiểm tra nếu đã gửi tin nhắn đầu tiên
   const [hasSubmittedFirstMessage, setHasSubmittedFirstMessage] =
@@ -87,12 +88,20 @@ const ChatContent = () => {
     hasSubmittedFirstMessage,
   ]);
 
+  // Xử lý khi hiệu ứng đánh máy hoàn tất
+  const handleTypingComplete = () => {
+    setIsTypingComplete(true);
+  };
+
   // Xử lý gửi tin nhắn
   const handleSubmit = async (inputMsg: string) => {
-    if (!inputMsg.trim()) return;
+    if (!inputMsg.trim() || !isTypingComplete) return;
 
     // Set state đã gửi tin nhắn đầu tiên
     setHasSubmittedFirstMessage(true);
+
+    // Đặt trạng thái đang hiển thị hiệu ứng
+    setIsTypingComplete(false);
 
     // Gửi tin nhắn thông qua provider
     await sendMessage(inputMsg);
@@ -126,7 +135,11 @@ const ChatContent = () => {
               animate={{ opacity: 1 }}
               className="flex-1 overflow-hidden relative"
             >
-              <ChatContainer messages={conversationMessages} />
+              <ChatContainerAnimated
+                messages={conversationMessages}
+                typingSpeed={20}
+                onTypingComplete={handleTypingComplete}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -177,7 +190,13 @@ const ChatContent = () => {
                   onSubmit={handleSubmit}
                   value={inputValue}
                   onChange={setInputValue}
+                  disabled={!isTypingComplete}
                 />
+                {!isTypingComplete && (
+                  <div className="text-center text-sm text-zinc-500 mt-2">
+                    Đang hiển thị câu trả lời... Vui lòng đợi
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

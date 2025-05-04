@@ -14,6 +14,7 @@ interface ChatInputProps {
   value?: string;
   onChange?: (value: string) => void;
   onSubmit?: (message: string) => Promise<void>;
+  disabled?: boolean;
 }
 
 export default function ChatInput({
@@ -21,6 +22,7 @@ export default function ChatInput({
   value,
   onChange,
   onSubmit,
+  disabled = false,
 }: ChatInputProps) {
   // Nếu không có prop từ bên ngoài, sử dụng state nội bộ
   const [localInputValue, setLocalInputValue] = useState("");
@@ -60,7 +62,7 @@ export default function ChatInput({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || disabled) return;
 
     try {
       // Sử dụng onSubmit từ props hoặc sendMessage từ context
@@ -91,8 +93,8 @@ export default function ChatInput({
 
   // Xử lý sự kiện nhấn phím
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Nếu nhấn Enter và không giữ Shift
-    if (e.key === "Enter" && !e.shiftKey) {
+    // Nếu nhấn Enter và không giữ Shift và không disabled
+    if (e.key === "Enter" && !e.shiftKey && !disabled) {
       e.preventDefault(); // Ngăn không cho xuống dòng mặc định
       handleSubmit(e); // Gọi hàm submit
     }
@@ -285,7 +287,8 @@ export default function ChatInput({
       <div
         className={cn(
           "bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700/50",
-          centered ? "transform-gpu" : ""
+          centered ? "transform-gpu" : "",
+          disabled ? "opacity-60" : ""
         )}
       >
         {/* Form with textarea */}
@@ -307,7 +310,7 @@ export default function ChatInput({
                 "text-base"
               )}
               rows={1}
-              disabled={isLoading}
+              disabled={isLoading || disabled}
             />
 
             {/* Hiển thị thông báo lỗi nếu có */}
@@ -327,6 +330,7 @@ export default function ChatInput({
                 className="min-w-[280px]"
                 itemClassName="transition-colors duration-150"
                 titleIcon={<Plus size={18} />}
+                disabled={disabled}
               />
 
               <DropDownAnimation
@@ -336,19 +340,22 @@ export default function ChatInput({
                 itemClassName="hover:bg-zinc-700/50"
                 title={model}
                 titleIcon={<ChevronUp size={16} />}
+                disabled={disabled}
               />
             </div>
 
             <div className="flex items-center gap-1">
               <motion.button
                 type="submit"
-                disabled={!inputValue.trim() || isLoading}
+                disabled={!inputValue.trim() || isLoading || disabled}
                 whileTap={
-                  inputValue.trim() && !isLoading ? { scale: 0.95 } : {}
+                  inputValue.trim() && !isLoading && !disabled
+                    ? { scale: 0.95 }
+                    : {}
                 }
                 className={cn(
                   "p-2 rounded-full transition-colors relative",
-                  inputValue.trim() && !isLoading
+                  inputValue.trim() && !isLoading && !disabled
                     ? "bg-primary text-white hover:bg-primary/90"
                     : "dark:bg-zinc-800 ring-2 ring-zinc-200 dark:ring-zinc-700/50 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}

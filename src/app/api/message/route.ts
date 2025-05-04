@@ -1,6 +1,6 @@
 // app/api/messages/route.ts
 import { NextResponse } from "next/server";
-import DOMPurify from "dompurify";
+import DOMPurify, { WindowLike } from "dompurify";
 import { JSDOM } from "jsdom";
 import OpenAI from "openai";
 const client = new OpenAI({
@@ -8,7 +8,7 @@ const client = new OpenAI({
 });
 const createDOMPurifyServer = () => {
   const window = new JSDOM("").window;
-  return DOMPurify(window);
+  return DOMPurify(window as unknown as WindowLike);
 };
 
 const sanitizeData = (data: any) => {

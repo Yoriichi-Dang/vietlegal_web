@@ -17,6 +17,7 @@ type DropDownAnimationProps = {
   itemClassName?: string;
   title?: string;
   titleIcon?: React.ReactNode;
+  disabled?: boolean;
 };
 
 const DropDownAnimation = ({
@@ -26,10 +27,17 @@ const DropDownAnimation = ({
   itemClassName,
   title,
   titleIcon,
+  disabled = false,
 }: DropDownAnimationProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const toggleDropdown = () => setShowDropdown(!showDropdown);
+
+  const toggleDropdown = () => {
+    if (!disabled) {
+      setShowDropdown(!showDropdown);
+    }
+  };
+
   // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -86,18 +94,20 @@ const DropDownAnimation = ({
     <div className="relative">
       <motion.button
         type="button"
-        whileTap={{ scale: 0.95 }}
+        whileTap={disabled ? undefined : { scale: 0.95 }}
         onClick={toggleDropdown}
+        disabled={disabled}
         className={cn(
           "flex items-center p-2 gap-1 rounded-full ring-2 ring-zinc-100 dark:ring-zinc-700/50 bg-white dark:bg-zinc-800 text-zinc-400",
-          "hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors"
+          "hover:bg-zinc-100 dark:hover:bg-zinc-700/50 transition-colors",
+          disabled && "opacity-50 cursor-not-allowed"
         )}
       >
         {title && <span className="text-xs font-medium">{title}</span>}
         {titleIcon}
       </motion.button>
       <AnimatePresence>
-        {showDropdown && (
+        {showDropdown && !disabled && (
           <motion.div
             ref={dropdownRef}
             initial="hidden"
