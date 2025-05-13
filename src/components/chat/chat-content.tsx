@@ -15,7 +15,6 @@ const ChatContent = () => {
     useConversation();
 
   // Sử dụng hook để lưu tin nhắn khi đóng tab
-  useSaveMessagesOnUnload();
 
   // Ref for the scrollable container
   const { data: session, status: sessionStatus } = useSession();
