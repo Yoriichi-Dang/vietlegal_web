@@ -14,6 +14,9 @@ const ChatContent = () => {
   const { activeConversation, sendMessage, createConversation } =
     useConversation();
 
+  // Sử dụng hook để lưu tin nhắn khi đóng tab
+  useSaveMessagesOnUnload();
+
   // Ref for the scrollable container
   const { data: session, status: sessionStatus } = useSession();
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -51,33 +54,10 @@ const ChatContent = () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [sessionStatus]);
-
   // Xử lý khi hiệu ứng đánh máy hoàn tất
   const handleTypingComplete = () => {
     setIsTypingComplete(true);
   };
-
-  // Xử lý gửi tin nhắn
-  // const handleSubmit = async (inputMsg: string, modelId: string) => {
-  //   if (!inputMsg.trim() || !isTypingComplete) return;
-
-  //   // Set state đã gửi tin nhắn đầu tiên
-
-  //   // Đặt trạng thái đang hiển thị hiệu ứng
-  //   setIsTypingComplete(false);
-  //   try {
-  //     if (!activeConversation) {
-  //       await createConversation();
-  //     }
-  //     if (activeConversation) {
-  //       await sendMessage(inputMsg, modelId);
-  //       setInputValue("");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error sending message:", error);
-  //     setIsTypingComplete(true);
-  //   }
-  // };
 
   const handleSubmit = useCallback(
     async (inputMsg: string, modelId: string) => {
@@ -149,7 +129,9 @@ const ChatContent = () => {
 
         {/* Hiển thị ChatInput ở giữa màn hình khi chưa có tin nhắn */}
         <AnimatePresence>
-          {!activeConversation ? (
+          {!activeConversation ||
+          (activeConversation && !activeConversation.messages) ||
+          activeConversation.messages.length == 0 ? (
             <motion.div
               className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center p-4"
               initial={{ opacity: 0, y: 20 }}

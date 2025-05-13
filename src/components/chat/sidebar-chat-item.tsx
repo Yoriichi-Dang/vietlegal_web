@@ -1,4 +1,10 @@
-import React, { useState, useRef, Dispatch, SetStateAction } from "react";
+import React, {
+  useState,
+  useRef,
+  Dispatch,
+  SetStateAction,
+  useCallback,
+} from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MoreVertical, Trash, Edit, Share } from "lucide-react";
@@ -21,10 +27,15 @@ const SidebarChatItem = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const { activeConversation, getConversationById } = useConversation();
+  const {
+    activeConversation,
+    setActiveConversation,
+    conversations,
+    deleteConversation,
+    saveMessageInActiveConversation,
+  } = useConversation();
 
   const isDropdownOpen = activeDropdownId === id;
-  const isActive = activeConversation?.id === id;
 
   const itemVariants = {
     hidden: {
@@ -84,16 +95,33 @@ const SidebarChatItem = ({
   const handleAction = (action: string, e: React.MouseEvent) => {
     e.stopPropagation();
     // Handle different actions
-    console.log(`${action} action for chat: ${id}`);
     setActiveDropdownId(null);
   };
 
-  const handleItemClick = () => {
-    // Close any open dropdown when clicking on another item
-    // if (activeDropdownId && activeDropdownId !== id) {
-    //   setActiveDropdownId(null);
-    // }
-    getConversationById(id);
+  // const handleItemClick = () => {
+  //   // Close any open dropdown when clicking on another item
+  //   // if (activeDropdownId && activeDropdownId !== id) {
+  //   //   setActiveDropdownId(null);
+  //   // }
+  //   if (typeof window !== "undefined") {
+  //     const newUrl = `/c/${id}`;
+  //     window.history.pushState(
+  //       { ...window.history.state, as: newUrl, url: newUrl },
+  //       "",
+  //       newUrl
+  //     );
+  //     const conversation = conversations.find(
+  //       (conversation) => conversation.id === id
+  //     );
+  //     if (conversation) {
+  //       setActiveConversation(conversation);
+  //     }
+  //   }
+  // };
+  const handleItemClick = useCallback(() => {
+    if (activeDropdownId && activeDropdownId !== id) {
+      setActiveDropdownId(null);
+    }
     if (typeof window !== "undefined") {
       const newUrl = `/c/${id}`;
       window.history.pushState(
@@ -101,9 +129,22 @@ const SidebarChatItem = ({
         "",
         newUrl
       );
-      console.log("Updated URL to:", newUrl);
+      const conversation = conversations.find(
+        (conversation) => conversation.id === id
+      );
+      if (conversation) {
+        setActiveConversation(conversation);
+        saveMessageInActiveConversation();
+      }
     }
-  };
+  }, [
+    conversations,
+    setActiveConversation,
+    activeDropdownId,
+    id,
+    setActiveDropdownId,
+    saveMessageInActiveConversation,
+  ]);
 
   return (
     <motion.div
@@ -112,7 +153,7 @@ const SidebarChatItem = ({
         "flex items-center gap-3 py-2 px-3 rounded-md cursor-pointer group relative",
         "hover:bg-gray-100 dark:hover:bg-zinc-800",
         isDropdownOpen ? "bg-gray-100 dark:bg-zinc-800" : "",
-        isActive ? "bg-gray-200 dark:bg-zinc-700" : ""
+        activeConversation?.id === id ? "bg-gray-200 dark:bg-zinc-700" : ""
       )}
       onContextMenu={handleContextMenu}
       onMouseEnter={() => setShowContextMenu(true)}
@@ -159,7 +200,21 @@ const SidebarChatItem = ({
               Share
             </button>
             <button
-              onClick={(e) => handleAction("delete", e)}
+              onClick={async (e) => {
+                e.stopPropagation();
+                await deleteConversation(id);
+                setActiveDropdownId(null);
+                if (activeConversation?.id === id) {
+                  setActiveConversation(null);
+                  if (typeof window !== "undefined") {
+                    window.history.pushState(
+                      { ...window.history.state, as: "/new", url: "/new" },
+                      "",
+                      "/new"
+                    );
+                  }
+                }
+              }}
               className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-zinc-700"
             >
               <Trash size={16} className="mr-2" />

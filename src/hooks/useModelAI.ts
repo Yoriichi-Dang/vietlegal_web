@@ -5,16 +5,7 @@ import { modelApiUrl } from "@/utils/config";
 import { AxiosError } from "axios";
 import useAxiosAuth from "./useAxiosAuth";
 import { useEffect } from "react";
-
-// Định nghĩa kiểu dữ liệu cho model AI
-export interface AIModel {
-  model_id: string;
-  name: string;
-  provider: string;
-  description: string;
-  created_at: string;
-  updated_at: string;
-}
+import { AIModel } from "@/types/chat";
 
 interface UseModelAIOptions {
   enabled?: boolean;

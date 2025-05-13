@@ -20,7 +20,7 @@ const modelApiUrl = {
 const getConversationMessageApiUrl = (id?: string): Record<string, string> => {
   if (!id) {
     return {
-      getAllConversations: `/conversations`,
+      getAllConversations: `/conversations/with-details`,
       createConversation: `/conversations`,
     };
   }
@@ -29,6 +29,7 @@ const getConversationMessageApiUrl = (id?: string): Record<string, string> => {
     createMessage: `/conversations/${id}/messages`,
     updateConversation: `/conversations/${id}`,
     deleteConversation: `/conversations/${id}`,
+    saveAllMessagesInConversation: `/conversations/${id}/batch-messages`,
   };
 };
 

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useRef, KeyboardEvent } from "react";
+import React, { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { Plus, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
 import { useConversation } from "@/provider/conversation-provider";
 import { useModelAI } from "@/hooks/useModelAI";
+import { AIModel } from "@/types/chat";
 
 // Thêm prop 'centered' để xác định vị trí hiển thị
 interface ChatInputProps {
@@ -28,9 +29,13 @@ export default function ChatInput({
   const [localInputValue, setLocalInputValue] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [model, setModel] = useState("model");
+  const [model, setModel] = useState<AIModel | null>(null);
   const { data: models } = useModelAI();
-
+  useEffect(() => {
+    if (models) {
+      setModel(models[0]);
+    }
+  }, [models]);
   // Use conversation context nếu không có prop onSubmit
   const { isSendingMessage } = useConversation();
 
@@ -66,7 +71,7 @@ export default function ChatInput({
     try {
       // Sử dụng onSubmit từ props hoặc sendMessage từ context
       if (onSubmit) {
-        await onSubmit(inputValue, model);
+        await onSubmit(inputValue, model?.model_id as string);
       } else {
         // await contextSendMessage(inputValue);
       }
@@ -245,7 +250,7 @@ export default function ChatInput({
     id: model.model_id,
     name: model.name,
     icons: null,
-    action: () => setModel(model.model_id),
+    action: () => setModel(model),
   }));
   // Define model dropdown items
 
@@ -315,7 +320,7 @@ export default function ChatInput({
                   className="w-36"
                   containerClassName="space-y-1"
                   itemClassName="hover:bg-zinc-700/50"
-                  title={model}
+                  title={model?.name || "Select Model"}
                   titleIcon={<ChevronUp size={16} />}
                   disabled={isSendingMessage || disabled}
                 />

@@ -5,6 +5,8 @@ export interface AIModel {
   name: string;
   provider: string;
   description: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface Attachment {
@@ -14,8 +16,8 @@ export interface Attachment {
   file_type: string;
   file_size: number;
   message_id: string;
-  created_at: Date;
-  updated_at: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface Message {
@@ -29,6 +31,7 @@ export interface Message {
   model?: AIModel;
   created_at?: Date;
   updated_at?: Date;
+  is_saved?: boolean | null;
 }
 
 export interface Conversation {
@@ -37,8 +40,8 @@ export interface Conversation {
   is_archived: boolean;
   user_id: string;
   messages: Message[];
-  created_at: Date;
-  updated_at: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // Response types for API calls

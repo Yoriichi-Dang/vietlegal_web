@@ -7,7 +7,6 @@ import { Search } from "lucide-react";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useConversation } from "@/provider/conversation-provider";
-import { useRouter } from "next/navigation";
 
 const SidebarTool = ({
   isCollapsed,
@@ -18,7 +17,6 @@ const SidebarTool = ({
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const { createConversation } = useConversation();
-  const router = useRouter();
 
   // Kiểm tra kích thước màn hình khi component được render
   useEffect(() => {
@@ -40,8 +38,6 @@ const SidebarTool = ({
   const handleNewChat = async () => {
     try {
       await createConversation();
-
-      router.push("/new");
     } catch (error) {
       console.error(
         "[DEBUG - handleNewChat] Error creating new conversation:",

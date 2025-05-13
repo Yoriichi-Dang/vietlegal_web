@@ -138,12 +138,12 @@ const Sidebar = () => {
 
   // Cuộc trò chuyện trong 7 ngày gần đây
   const recentConversations = conversations.filter(
-    (conv) => new Date(conv.created_at) >= oneWeekAgo
+    (conv) => new Date(conv.created_at || "") >= oneWeekAgo
   );
 
   // Cuộc trò chuyện cũ hơn 7 ngày
   const olderConversations = conversations.filter(
-    (conv) => new Date(conv.created_at) < oneWeekAgo
+    (conv) => new Date(conv.created_at || "") < oneWeekAgo
   );
 
   // Điều kiện hiển thị overlay: đã mount + màn hình nhỏ + không đóng + đã mở thủ công

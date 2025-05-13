@@ -30,8 +30,8 @@ interface ConversationContextType {
   ) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<void>;
   updateConversation: (conversation: Conversation) => Promise<void>;
-  getConversationById: (conversationId: string) => Promise<void>;
   createConversation: () => Promise<void>;
+  saveMessageInActiveConversation: () => Promise<void>;
 }
 
 // Create context with default values
@@ -53,17 +53,24 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     queryFn: async () => {
       const url = getConversationMessageApiUrl().getAllConversations;
       const response = await axiosAuth.get(url);
-      setConversations(response.data);
+      const conversations = response.data.map((conversation: Conversation) => ({
+        ...conversation,
+        messages: conversation.messages.map((message: Message) => ({
+          ...message,
+          is_saved: true,
+        })),
+      }));
+      setConversations(conversations);
       setIsLoading(false);
-      return response.data;
+      return conversations;
     },
     enabled: isReady,
     staleTime: 25 * 60 * 1000, // 25 phút
     refetchOnWindowFocus: false,
   });
+
   useEffect(() => {
     if (activeConversation) {
-      // Cập nhật conversation trong danh sách conversations khi active conversation thay đổi
       setConversations((prevConversations) =>
         prevConversations.map((conv) =>
           conv.id === activeConversation.id ? activeConversation : conv
@@ -82,23 +89,10 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [setActiveConversation]
   );
-  const getConversationById = useCallback(
-    async (conversationId: string) => {
-      const url =
-        getConversationMessageApiUrl(conversationId).getConversationById;
-      await axiosAuth
-        .get(url)
-        .then((response) => {
-          setActiveConversation(response.data);
-        })
-        .finally(() => {
-          console.log("activeConversation", activeConversation);
-        });
-    },
-    [axiosAuth]
-  );
+
   const updateConversation = useCallback(
     async (conversation: Conversation) => {
+      console.log("updateConversation");
       if (!conversation || !conversation.id) {
         console.error("Không thể cập nhật: conversation hoặc id không tồn tại");
         return;
@@ -138,6 +132,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         sender_type: "user",
         message_type: "text",
         content: message,
+        is_saved: false,
       });
 
       const body = {
@@ -153,6 +148,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
           model_id: modelId,
           message_type: "text",
           content: response.data.response,
+          is_saved: false,
         };
 
         let updatedConversation: Conversation | null = null;
@@ -213,16 +209,75 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createConversation = useCallback(async () => {
     const url = getConversationMessageApiUrl().createConversation;
-    await axiosAuth
-      .post(url, {
-        title: "New Conversation",
-      })
-      .then((response) => {
-        setConversations([response.data, ...conversations]);
-        setActiveConversation(response.data);
-      });
-  }, [conversations, axiosAuth]);
-
+    if (isReady) {
+      await axiosAuth
+        .post(url, {
+          title: "New Conversation",
+        })
+        .then((response) => {
+          setConversations([response.data, ...conversations]);
+          setActiveConversation(response.data);
+        });
+    }
+  }, [conversations, axiosAuth, isReady]);
+  const saveMessageInActiveConversation = useCallback(async () => {
+    if (
+      isReady &&
+      activeConversation &&
+      activeConversation.messages &&
+      activeConversation.messages.length > 0
+    ) {
+      const url = getConversationMessageApiUrl(
+        activeConversation.id
+      ).saveAllMessagesInConversation;
+      const messages = activeConversation.messages
+        .filter((message) => message.is_saved === false)
+        .map((message) => ({
+          content: message.content,
+          sender_type: message.sender_type,
+          model_id: message.model_id || null,
+          message_type: message.message_type,
+          attachments: message.attachments || null,
+        }));
+      if (messages && messages.length > 0) {
+        await axiosAuth
+          .post(url, {
+            messages: messages,
+          })
+          .then(() => {
+            console.log("saveMessageInActiveConversation success");
+          })
+          .catch((error) => {
+            console.error("saveMessageInActiveConversation error", error);
+          });
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === activeConversation?.id
+              ? {
+                  ...conv,
+                  messages: conv.messages?.map((message) => ({
+                    ...message,
+                    is_saved: true,
+                  })),
+                }
+              : conv
+          )
+        );
+        setActiveConversation((prev: Conversation | null) => {
+          if (prev) {
+            return {
+              ...prev,
+              messages: prev.messages?.map((message) => ({
+                ...message,
+                is_saved: true,
+              })),
+            };
+          }
+          return null;
+        });
+      }
+    }
+  }, [activeConversation, axiosAuth, isReady]);
   return (
     <ConversationContext.Provider
       value={{
@@ -235,9 +290,9 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         deleteConversation,
         updateConversation,
         createConversation,
-        getConversationById,
         isSendingMessage,
         setIsSendingMessage,
+        saveMessageInActiveConversation,
       }}
     >
       {children}
