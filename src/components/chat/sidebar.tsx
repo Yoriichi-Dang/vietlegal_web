@@ -13,55 +13,11 @@ import { useConversation } from "@/provider/conversation-provider";
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(true); // Bắt đầu với sidebar đóng
   const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [manuallyOpened, setManuallyOpened] = useState(false); // Theo dõi việc mở thủ công
-  const [refreshKey, setRefreshKey] = useState(0); // Thêm state để force refresh
   const { width } = useWindowSize();
   const { conversations } = useConversation(); // Lấy danh sách conversations từ provider
-
   // Biến để kiểm tra xem có phải là màn hình nhỏ không
   const isSmallScreen = width < 750;
-
-  // State để lưu số lượng conversations trước đó
-  const [prevConversationsCount, setPrevConversationsCount] = useState(0);
-
-  // Đánh dấu component đã mount
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Log conversations khi có thay đổi
-  useEffect(() => {
-    if (conversations.length > 0) {
-      console.log(
-        "Sidebar received updated conversations:",
-        conversations.length
-      );
-      console.log(
-        "Conversation details:",
-        conversations.map((c) => ({ id: c.id, title: c.title }))
-      );
-
-      // Force refresh Sidebar khi conversations thay đổi
-      setRefreshKey((prev) => prev + 1);
-
-      // Kiểm tra nếu conversations đã tăng lên (có conversation mới được thêm vào)
-      if (conversations.length > prevConversationsCount) {
-        console.log(
-          "New conversation detected! Auto opening sidebar if on large screen"
-        );
-        // Tự động mở sidebar nếu là màn hình lớn
-        if (!isSmallScreen) {
-          setIsCollapsed(false);
-        }
-      }
-
-      // Cập nhật số lượng conversations
-      setPrevConversationsCount(conversations.length);
-    } else {
-      console.log("Sidebar: No conversations available");
-    }
-  }, [conversations, isSmallScreen, prevConversationsCount]);
 
   // Xử lý việc mở/đóng sidebar
   const toggleSidebar = () => {
@@ -79,8 +35,6 @@ const Sidebar = () => {
 
   // Tự động điều chỉnh sidebar dựa trên kích thước màn hình
   useEffect(() => {
-    if (!isMounted) return;
-
     if (isSmallScreen) {
       // Chỉ tự động đóng nếu chưa được mở thủ công
       if (!manuallyOpened) {
@@ -91,7 +45,7 @@ const Sidebar = () => {
       setIsCollapsed(false);
       setManuallyOpened(false); // Reset lại trạng thái
     }
-  }, [width, isSmallScreen, isMounted, manuallyOpened]);
+  }, [width, isSmallScreen, manuallyOpened]);
 
   const sidebarVariants = {
     expanded: {
@@ -184,26 +138,25 @@ const Sidebar = () => {
 
   // Cuộc trò chuyện trong 7 ngày gần đây
   const recentConversations = conversations.filter(
-    (conv) => new Date(conv.updatedAt) >= oneWeekAgo
+    (conv) => new Date(conv.created_at) >= oneWeekAgo
   );
 
   // Cuộc trò chuyện cũ hơn 7 ngày
   const olderConversations = conversations.filter(
-    (conv) => new Date(conv.updatedAt) < oneWeekAgo
+    (conv) => new Date(conv.created_at) < oneWeekAgo
   );
 
   // Điều kiện hiển thị overlay: đã mount + màn hình nhỏ + không đóng + đã mở thủ công
-  const showOverlay =
-    isMounted && isSmallScreen && !isCollapsed && manuallyOpened;
+  const showOverlay = isSmallScreen && !isCollapsed && manuallyOpened;
 
   return (
     <>
       {/* Thêm refreshKey vào component key để buộc render lại khi conversations thay đổi */}
-      <div key={`sidebar-container-${refreshKey}`}>
+      <div>
         {/* Overlay chỉ hiển thị khi thỏa mãn tất cả điều kiện */}
         {showOverlay && (
           <div
-            className=" bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-10 bg-black/50 backdrop-blur-sm w-full h-full"
             onClick={toggleSidebar}
           />
         )}

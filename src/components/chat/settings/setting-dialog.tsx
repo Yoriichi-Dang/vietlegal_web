@@ -18,41 +18,38 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Cog,
-  User,
-  Speech,
-  Database,
-  Building2,
-  AppWindow,
-  Shield,
-} from "lucide-react";
-
+import { Cog, User, LockKeyhole } from "lucide-react";
+import { useTheme } from "@/provider/theme-provider";
+import { useSession } from "next-auth/react";
+import PasswordForm from "./password-form";
+import PersonalProfile from "./personal-profile";
 // Định nghĩa các mục menu trong sidebar
-const MENU_ITEMS = [
+const MENU_ITEMS_WITH_NO_PASSWORD = [
   { icon: <Cog className="w-5 h-5" />, label: "General", id: "general" },
   {
     icon: <User className="w-5 h-5" />,
     label: "Personalization",
     id: "personalization",
   },
-  { icon: <Speech className="w-5 h-5" />, label: "Speech", id: "speech" },
+  // {
+  //   icon: <Building2 className="w-5 h-5" />,
+  //   label: "Builder profile",
+  //   id: "builder-profile",
+  // },
+  // {
+  //   icon: <AppWindow className="w-5 h-5" />,
+  //   label: "Connected apps",
+  //   id: "connected-apps",
+  // },
+];
+
+const MENU_ITEMS_WITH_PASSWORD = [
+  ...MENU_ITEMS_WITH_NO_PASSWORD,
   {
-    icon: <Database className="w-5 h-5" />,
-    label: "Data controls",
-    id: "data-controls",
+    icon: <LockKeyhole className="w-5 h-5" />,
+    label: "Password",
+    id: "password",
   },
-  {
-    icon: <Building2 className="w-5 h-5" />,
-    label: "Builder profile",
-    id: "builder-profile",
-  },
-  {
-    icon: <AppWindow className="w-5 h-5" />,
-    label: "Connected apps",
-    id: "connected-apps",
-  },
-  { icon: <Shield className="w-5 h-5" />, label: "Security", id: "security" },
 ];
 
 // Định nghĩa interface cho settings
@@ -71,9 +68,16 @@ const SettingDialog = ({
   setIsDialogOpen: (isOpen: boolean) => void;
 }) => {
   // State cho menu và settings
+  const { setTheme, theme } = useTheme();
+  const { data: user } = useSession();
+
+  const menuItems =
+    user?.user.typeLogin === "password"
+      ? MENU_ITEMS_WITH_PASSWORD
+      : MENU_ITEMS_WITH_NO_PASSWORD;
   const [activeMenuItem, setActiveMenuItem] = useState("general");
   const [settings, setSettings] = useState<SettingsState>({
-    theme: "dark",
+    theme: theme,
     showCode: false,
     showSuggestions: true,
     language: "auto",
@@ -86,28 +90,6 @@ const SettingDialog = ({
       [setting]: value,
     });
   };
-
-  // Ứng dụng theme khi thay đổi
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const root = window.document.documentElement;
-
-      if (settings.theme === "dark") {
-        root.classList.add("dark");
-      } else if (settings.theme === "light") {
-        root.classList.remove("dark");
-      } else if (settings.theme === "auto") {
-        const isDark = window.matchMedia(
-          "(prefers-color-scheme: dark)"
-        ).matches;
-        if (isDark) {
-          root.classList.add("dark");
-        } else {
-          root.classList.remove("dark");
-        }
-      }
-    }
-  }, [settings.theme]);
 
   // Animations
   const menuItemVariants = {
@@ -155,27 +137,28 @@ const SettingDialog = ({
         <div className="grid grid-cols-4 h-[calc(100%-56px)]">
           {/* Sidebar Menu */}
           <div className="col-span-1 border-r border-zinc-200 dark:border-zinc-800 py-2">
-            {MENU_ITEMS.map((item, index) => (
-              <motion.div
-                key={item.id}
-                custom={index}
-                initial="hidden"
-                animate="visible"
-                variants={menuItemVariants}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200",
-                  activeMenuItem === item.id
-                    ? "bg-zinc-100 dark:bg-zinc-800"
-                    : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                )}
-                onClick={() => setActiveMenuItem(item.id)}
-                whileHover={{ x: 2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {item.icon}
-                <span className="text-sm">{item.label}</span>
-              </motion.div>
-            ))}
+            {menuItems &&
+              menuItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  custom={index}
+                  initial="hidden"
+                  animate="visible"
+                  variants={menuItemVariants}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors duration-200",
+                    activeMenuItem === item.id
+                      ? "bg-zinc-100 dark:bg-zinc-800"
+                      : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                  )}
+                  onClick={() => setActiveMenuItem(item.id)}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {item.icon}
+                  <span className="text-sm">{item.label}</span>
+                </motion.div>
+              ))}
           </div>
 
           {/* Content Area */}
@@ -198,9 +181,10 @@ const SettingDialog = ({
                     <span>Theme</span>
                     <Select
                       value={settings.theme}
-                      onValueChange={(value) =>
-                        handleSelectChange("theme", value)
-                      }
+                      onValueChange={(value) => {
+                        handleSelectChange("theme", value);
+                        setTheme(value as ThemeMode);
+                      }}
                     >
                       <SelectTrigger className="w-32 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-black dark:text-white">
                         <SelectValue placeholder="Theme" />
@@ -210,30 +194,6 @@ const SettingDialog = ({
                           <SelectItem value="light">Light</SelectItem>
                           <SelectItem value="dark">Dark</SelectItem>
                           <SelectItem value="auto">System</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </motion.div>
-
-                  <motion.div
-                    className="flex justify-between items-center border-t border-zinc-200 dark:border-zinc-800 pt-8"
-                    variants={itemVariants}
-                  >
-                    <span>Language</span>
-                    <Select
-                      value={settings.language}
-                      onValueChange={(value) =>
-                        handleSelectChange("language", value)
-                      }
-                    >
-                      <SelectTrigger className="w-32 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-black dark:text-white">
-                        <SelectValue placeholder="Language" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-black dark:text-white">
-                        <SelectGroup>
-                          <SelectItem value="english">English</SelectItem>
-                          <SelectItem value="vietnamese">Vietnamese</SelectItem>
-                          <SelectItem value="auto">Auto-detect</SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
@@ -277,23 +237,30 @@ const SettingDialog = ({
                   </motion.div>
                 </motion.div>
               )}
-
-              {activeMenuItem !== "general" && (
+              {activeMenuItem === "password" && (
                 <motion.div
-                  key={activeMenuItem}
-                  className="h-full flex items-center justify-center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
+                  key="password"
+                  className="space-y-8"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={contentVariants}
                 >
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {
-                      MENU_ITEMS.find((item) => item.id === activeMenuItem)
-                        ?.label
-                    }{" "}
-                    settings coming soon
-                  </p>
+                  {/* Personalization content goes here */}
+                  <PasswordForm />
+                </motion.div>
+              )}
+              {activeMenuItem === "personalization" && (
+                <motion.div
+                  key="personalization"
+                  className="space-y-8"
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={contentVariants}
+                >
+                  {/* Personalization content goes here */}
+                  <PersonalProfile />
                 </motion.div>
               )}
             </div>

@@ -13,7 +13,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 interface ChatMessageAnimatedProps {
   content: string;
-  isUser: boolean;
+  senderType: "user" | "model" | "system";
   messageId: number | string;
   typingSpeed?: number;
   isLastMessage?: boolean;
@@ -22,7 +22,7 @@ interface ChatMessageAnimatedProps {
 
 const ChatMessageAnimated: React.FC<ChatMessageAnimatedProps> = ({
   content,
-  isUser,
+  senderType,
   messageId,
   typingSpeed = 30,
   isLastMessage = false,
@@ -56,7 +56,7 @@ const ChatMessageAnimated: React.FC<ChatMessageAnimatedProps> = ({
 
   // Custom components cho ReactMarkdown
   const components = {
-    code({ node, inline, className, children, ...props }: any) {
+    code({ inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || "");
       const language = match ? match[1] : "";
       const codeContent = String(children).replace(/\n$/, "");
@@ -120,7 +120,9 @@ const ChatMessageAnimated: React.FC<ChatMessageAnimatedProps> = ({
 
   return (
     <motion.div
-      className={`w-full flex ${isUser ? "justify-end" : "justify-start"}`}
+      className={`w-full flex ${
+        senderType === "user" ? "justify-end" : "justify-start"
+      }`}
       initial="initial"
       animate="animate"
       exit="exit"
@@ -130,12 +132,12 @@ const ChatMessageAnimated: React.FC<ChatMessageAnimatedProps> = ({
     >
       <div
         className={cn(
-          isUser
+          senderType === "user"
             ? "dark:bg-zinc-800 bg-gray-100 rounded-xl p-4 max-w-xl shadow-sm"
             : "p-4 max-w-xl"
         )}
       >
-        {isUser ? (
+        {senderType === "user" ? (
           <div className="markdown-content text-gray-800 dark:text-white text-base text-wrap whitespace-pre-wrap text-justify">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}

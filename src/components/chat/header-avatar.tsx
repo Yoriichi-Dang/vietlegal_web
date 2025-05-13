@@ -11,7 +11,7 @@ import Image from "next/image";
 import useOutsideClick from "@/hooks/useOutsideClick"; // Using your existing hook
 import Dropdown from "./dropdown-header";
 import { signOut, useSession } from "next-auth/react";
-import SettingDialog from "./setting-dialog";
+import SettingDialog from "./settings/setting-dialog";
 const HeaderAvatar = () => {
   const { data: session } = useSession();
   const [isDialogOpen, setIsDialogOpen] = useState(false);

@@ -41,7 +41,6 @@ export default function Home() {
           </div>
         </Link>
         <div className="flex items-center gap-4 md:gap-8">
-         
           <AuthButton />
 
           <ThemeModeToggle />

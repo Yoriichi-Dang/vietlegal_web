@@ -1,35 +1,18 @@
 import type { NextAuthConfig } from "next-auth";
-import type { DefaultSession } from "next-auth";
 import Google from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { authApiUrl, serverApiBaseUrl } from "./utils/config";
 
 // Định nghĩa kiểu dữ liệu phản hồi từ backend
 type TokenResponse = {
   user: {
     email: string;
     name: string;
-    image: string;
+    avatarUrl: string;
   };
   accessToken: string;
   refreshToken: string;
-  expiresIn: number;
 };
-
-// Module mở rộng cho Next-Auth
-declare module "next-auth" {
-  interface Session {
-    user: {
-      accessToken?: string;
-      refreshToken?: string;
-    } & DefaultSession["user"];
-  }
-
-  interface JWT {
-    accessToken?: string;
-    refreshToken?: string;
-    expiresIn?: number;
-  }
-}
 
 export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
@@ -54,7 +37,7 @@ export const authConfig: NextAuthConfig = {
         try {
           // Gửi thông tin Google OAuth xuống backend để xác thực và lưu
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/callback/google`,
+            `${serverApiBaseUrl}${authApiUrl.googleLogin}`,
             {
               method: "POST",
               headers: {
@@ -81,7 +64,7 @@ export const authConfig: NextAuthConfig = {
             if (data.accessToken) {
               (user as any).accessToken = data.accessToken;
               (user as any).refreshToken = data.refreshToken;
-              (user as any).expiresIn = data.expiresIn;
+              (user as any).typeLogin = "google";
             }
 
             return true;
@@ -97,44 +80,58 @@ export const authConfig: NextAuthConfig = {
 
       return true;
     },
-    async jwt({ token, user, account, trigger }) {
-      // Khi đăng nhập lần đầu
-      if (trigger === "signIn" || trigger === "signUp") {
-        if (user) {
-          // Lưu thông tin người dùng vào token
-          token.id = user.id;
-          token.email = user.email;
-          token.name = user.name;
-          token.picture = user.image;
+    async jwt({ token, user, account, trigger, session }) {
+      if (user) {
+        // Đảm bảo cập nhật token với thông tin từ user
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
 
-          // Lưu access token từ user object (đã được set trong signIn callback)
-          if ((user as any).accessToken) {
-            token.accessToken = (user as any).accessToken;
-            token.refreshToken = (user as any).refreshToken;
-            token.expiresIn = (user as any).expiresIn;
-
-            console.log("Token saved from OAuth:", token.accessToken);
-          }
+        // Trường hợp đăng nhập với credentials
+        if ((user as any).accessToken) {
+          token.accessToken = (user as any).accessToken;
+          token.refreshToken = (user as any).refreshToken;
+          token.typeLogin = (user as any).typeLogin; // Đảm bảo lấy typeLogin từ user
         }
 
-        // Xử lý trường hợp đăng nhập với Google nhưng không có custom callback
-        if (account?.provider === "google" && !token.accessToken) {
-          console.log("No custom token found, using default Google token");
-          token.accessToken = account.access_token;
-          token.refreshToken = account.refresh_token;
-          token.expiresIn = account.expires_at;
+        // Trường hợp đăng nhập với Google
+        if (account?.provider === "google") {
+          // Đảm bảo gán typeLogin là "google" cho Google Auth
+          token.typeLogin = "google";
+
+          // Nếu không có accessToken từ user, sử dụng từ account
+          if (!token.accessToken) {
+            token.accessToken = account.access_token;
+            token.refreshToken = account.refresh_token;
+          }
+        } else {
+          token.typeLogin = "password";
         }
       }
+      if (trigger === "update") {
+        if (session.user.accessToken && session.user.refreshToken) {
+          token.accessToken = session.user.accessToken;
+          token.refreshToken = session.user.refreshToken;
+        }
+        if (session.user.name) {
+          token.name = session.user.name;
+        }
+        if (session.user.image) {
+          token.picture = session.user.image;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        if (token.accessToken) {
-          session.user.accessToken = token.accessToken as string;
-        }
-        if (token.refreshToken) {
-          session.user.refreshToken = token.refreshToken as string;
-        }
+        session.user = {
+          ...session.user,
+          accessToken: token.accessToken as string,
+          refreshToken: token.refreshToken as string,
+          typeLogin: token.typeLogin as "google" | "password", // Đảm bảo gán typeLogin
+        };
       }
       return session;
     },
@@ -158,15 +155,11 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.error("Missing credentials");
           return null;
         }
 
         try {
-          const login_endpoint = `${process.env.BACKEND_API_URL}/auth/login`;
-          console.log("Attempting login for:", credentials.email);
-
-          const res = await fetch(login_endpoint, {
+          const res = await fetch(`${serverApiBaseUrl}${authApiUrl.login}`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -179,18 +172,16 @@ export const authConfig: NextAuthConfig = {
           });
 
           // Log response status
-          console.log("Login response status:", res.status);
           if (res.ok) {
             const tokenResponse = (await res.json()) as TokenResponse;
-            console.log("tokenResponse", tokenResponse);
             if (tokenResponse) {
               return {
                 email: tokenResponse.user.email,
                 name: tokenResponse.user.name,
-                image: tokenResponse.user.image,
+                image: tokenResponse.user.avatarUrl,
+                typeLogin: "password",
                 accessToken: tokenResponse.accessToken,
                 refreshToken: tokenResponse.refreshToken,
-                expiresIn: tokenResponse.expiresIn,
               };
             }
           } else {

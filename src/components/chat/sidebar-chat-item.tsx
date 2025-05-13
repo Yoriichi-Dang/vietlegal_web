@@ -21,8 +21,7 @@ const SidebarChatItem = ({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const { activeConversation, conversations, setActiveConversation } =
-    useConversation();
+  const { activeConversation, getConversationById } = useConversation();
 
   const isDropdownOpen = activeDropdownId === id;
   const isActive = activeConversation?.id === id;
@@ -91,29 +90,18 @@ const SidebarChatItem = ({
 
   const handleItemClick = () => {
     // Close any open dropdown when clicking on another item
-    if (activeDropdownId && activeDropdownId !== id) {
-      setActiveDropdownId(null);
-    }
-
-    // Tìm conversation theo id và đặt làm active
-    const conversation = conversations.find((conv) => conv.id === id);
-    console.log("Clicked conversation:", id, name);
-    console.log("Found conversation:", conversation);
-
-    if (conversation) {
-      setActiveConversation(conversation);
-      console.log("Set as active conversation:", conversation.title);
-
-      // Cập nhật URL nếu chúng ta đang ở trang chi tiết cuộc trò chuyện
-      if (typeof window !== "undefined") {
-        const newUrl = `/c/${id}`;
-        window.history.pushState(
-          { ...window.history.state, as: newUrl, url: newUrl },
-          "",
-          newUrl
-        );
-        console.log("Updated URL to:", newUrl);
-      }
+    // if (activeDropdownId && activeDropdownId !== id) {
+    //   setActiveDropdownId(null);
+    // }
+    getConversationById(id);
+    if (typeof window !== "undefined") {
+      const newUrl = `/c/${id}`;
+      window.history.pushState(
+        { ...window.history.state, as: newUrl, url: newUrl },
+        "",
+        newUrl
+      );
+      console.log("Updated URL to:", newUrl);
     }
   };
 

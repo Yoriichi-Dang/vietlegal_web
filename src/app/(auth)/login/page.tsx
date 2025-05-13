@@ -4,6 +4,7 @@ import { LoginFormData } from "@/schemas/login";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function Login() {
         redirect: false,
       });
       if (result?.error) {
-        throw new Error(result.error);
+        toast.error("Email hoặc mật khẩu không chính xác");
       }
       router.push("/new");
       router.refresh();

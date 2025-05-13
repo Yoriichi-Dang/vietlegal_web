@@ -9,7 +9,8 @@ import registerSchema, { RegisterFormData } from "@/schemas/register";
 import PasswordRequirements from "@/components/auth/password-requirements";
 import FormInput from "@/components/auth/input";
 import { toast } from "sonner";
-
+import { authApiUrl } from "@/utils/config";
+import axios from "@/utils/axios";
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -47,21 +48,21 @@ export default function Register() {
       }
 
       const { name, email, password } = validationResult.data;
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/auth/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username: name, email, password }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        toast("Registration failed", {
-          description: data.message,
-        });
+      // const res = await fetch(`${serverApiBaseUrl}${authApiUrl.register}`, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({ username: name, email, password }),
+      // });
+      const res = await axios.post(authApiUrl.register, {
+        username: name,
+        email,
+        password,
+      });
+      const data = res.data;
+      if (res.status !== 200) {
+        toast.error(data.message);
       }
       toast("Account has been created", {
         description: "Please login to continue",

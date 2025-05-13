@@ -1,20 +1,37 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { Message, Conversation } from "@/types/chat";
-
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  Dispatch,
+  SetStateAction,
+  useEffect,
+} from "react";
+import { Conversation, Message } from "@/types/chat";
+import { getConversationMessageApiUrl } from "@/utils/config";
+import useAxiosAuth from "@/hooks/useAxiosAuth";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 // Define context type
 interface ConversationContextType {
   conversations: Conversation[];
   activeConversation: Conversation | null;
-  messages: Message[];
+  setActiveConversation: Dispatch<SetStateAction<Conversation | null>>;
   isLoading: boolean;
-  setActiveConversation: React.Dispatch<
-    React.SetStateAction<Conversation | null>
-  >;
-  sendMessage: (content: string) => Promise<void>;
-  createNewConversation: (title?: string) => Promise<Conversation>;
-  loadConversation: (id: string) => Promise<void>;
+  setIsLoading: Dispatch<SetStateAction<boolean>>;
+  isSendingMessage: boolean;
+  setIsSendingMessage: Dispatch<SetStateAction<boolean>>;
+  sendMessage: (
+    message: string,
+    modelId: string,
+    isFirstMessage: boolean
+  ) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
+  updateConversation: (conversation: Conversation) => Promise<void>;
+  getConversationById: (conversationId: string) => Promise<void>;
+  createConversation: () => Promise<void>;
 }
 
 // Create context with default values
@@ -25,324 +42,204 @@ const ConversationContext = createContext<ConversationContextType | undefined>(
 export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { axiosAuth, isReady } = useAxiosAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] =
     useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // Simulate API fetch on mount
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  useQuery({
+    queryKey: ["conversations"],
+    queryFn: async () => {
+      const url = getConversationMessageApiUrl().getAllConversations;
+      const response = await axiosAuth.get(url);
+      setConversations(response.data);
+      setIsLoading(false);
+      return response.data;
+    },
+    enabled: isReady,
+    staleTime: 25 * 60 * 1000, // 25 phút
+    refetchOnWindowFocus: false,
+  });
   useEffect(() => {
-    const fetchConversations = async () => {
-      // Simulate API delay
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Set sample conversations
-      setConversations([]);
-      setIsLoading(false);
-    };
-
-    fetchConversations();
-  }, []);
-
-  const createNewConversation = async (
-    title?: string
-  ): Promise<Conversation> => {
-    setIsLoading(true);
-    console.log(
-      "[DEBUG - createNewConversation] Creating new conversation with title:",
-      title
-    );
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // Create new conversation with generated ID
-      const newId = String(Date.now());
-      const newConversation: Conversation = {
-        id: newId,
-        title: title || "New Conversation",
-        messages: [],
-        participants: [{ id: "user-1", name: "User" }],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      console.log(
-        "[DEBUG - createNewConversation] New conversation created with ID:",
-        newId
+    if (activeConversation) {
+      // Cập nhật conversation trong danh sách conversations khi active conversation thay đổi
+      setConversations((prevConversations) =>
+        prevConversations.map((conv) =>
+          conv.id === activeConversation.id ? activeConversation : conv
+        )
       );
-
-      // Set as active
-
-      setMessages([]);
-
-      return newConversation;
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  // Send a message in the active conversation
-  const sendMessage = async (content: string) => {
-    if (!content.trim() || isLoading) return;
-
-    setIsLoading(true);
-
-    try {
-      console.log(
-        "[DEBUG] Before creating - activeConversation:",
-        activeConversation
-      );
-
-      // Nếu không có activeConversation, tạo một conversation mới
-      if (!activeConversation) {
-        console.log(
-          "[DEBUG - sendMessage] No active conversation, creating a new one"
-        );
-        const newConv = await createNewConversation("New Conversation");
-        console.log(
-          "[DEBUG - sendMessage] Created new conversation with ID:",
-          newConv.id,
-          "and title:",
-          newConv.title
-        );
-
-        // Đặt active conversation trước khi gửi tin nhắn
-        console.log("[DEBUG] Setting active conversation:", newConv);
-        setActiveConversation(newConv);
-
-        // Thêm conversation mới vào danh sách ngay lập tức để đảm bảo nó xuất hiện trong sidebar
-        setConversations((prev) => {
-          console.log(
-            "[DEBUG - sendMessage] Adding new conversation to list temporarily:",
-            newConv.id
-          );
-          // Thêm conversation mới vào đầu danh sách
-          return [newConv, ...prev];
+  }, [activeConversation]);
+  const addMessageToActiveConversation = useCallback(
+    (message: Message) => {
+      setActiveConversation((prev: Conversation | null) => {
+        if (prev) {
+          return { ...prev, messages: [...(prev.messages || []), message] };
+        }
+        return null;
+      });
+    },
+    [setActiveConversation]
+  );
+  const getConversationById = useCallback(
+    async (conversationId: string) => {
+      const url =
+        getConversationMessageApiUrl(conversationId).getConversationById;
+      await axiosAuth
+        .get(url)
+        .then((response) => {
+          setActiveConversation(response.data);
+        })
+        .finally(() => {
+          console.log("activeConversation", activeConversation);
         });
-
-        // Lưu ID của conversation mới tạo và sử dụng nó để gửi tin nhắn
-        const newConvId = newConv.id;
-
-        // Gửi tin nhắn và lấy về kết quả trực tiếp
-        const result = await handleSendMessageToApiAndGetResult(
-          newConvId,
-          content,
-          true
-        );
-
-        // Nếu có kết quả, cập nhật title
-        if (result && result.title) {
-          console.log("[DEBUG] Got API result with title:", result.title);
-
-          // Tạo phiên bản mới của conversation với title mới
-          const updatedConv = {
-            ...newConv,
-            title: result.title,
-            updatedAt: new Date(),
-          };
-
-          // Đặt active conversation với title mới
-          setActiveConversation(updatedConv);
-
-          // Cập nhật conversation trong danh sách
-          setConversations((prevList) => {
-            return prevList.map((conv) =>
-              conv.id === newConvId ? updatedConv : conv
-            );
-          });
-
-          // Ghi log xác nhận
-          console.log(
-            "[DEBUG] Updated conversation with new title:",
-            result.title
-          );
-        }
-      } else {
-        // Nếu đã có activeConversation, sử dụng nó
-        console.log(
-          "[DEBUG - sendMessage] Using existing conversation:",
-          activeConversation.id,
-          "with title:",
-          activeConversation.title
-        );
-
-        const existingConvId = activeConversation.id;
-        // Kiểm tra xem đây có phải tin nhắn đầu tiên không
-        const isFirstMessage =
-          (activeConversation.title === "New Conversation" ||
-            !activeConversation.title) &&
-          messages.length === 0;
-
-        // Gửi tin nhắn và lấy về kết quả trực tiếp
-        const result = await handleSendMessageToApiAndGetResult(
-          existingConvId,
-          content,
-          isFirstMessage
-        );
-
-        // Nếu có kết quả, và đây là tin nhắn đầu tiên, cập nhật title
-        if (result && result.title && isFirstMessage) {
-          console.log(
-            "[DEBUG] Got API result with title for existing conversation:",
-            result.title
-          );
-
-          // Tạo phiên bản mới của conversation với title mới
-          const updatedConv = {
-            ...activeConversation,
-            title: result.title,
-            updatedAt: new Date(),
-          };
-
-          // Đặt active conversation với title mới
-          setActiveConversation(updatedConv);
-
-          // Cập nhật conversation trong danh sách
-          setConversations((prevList) => {
-            return prevList.map((conv) =>
-              conv.id === existingConvId ? updatedConv : conv
-            );
-          });
-
-          // Ghi log xác nhận
-          console.log(
-            "[DEBUG] Updated existing conversation with new title:",
-            result.title
-          );
-        }
+    },
+    [axiosAuth]
+  );
+  const updateConversation = useCallback(
+    async (conversation: Conversation) => {
+      if (!conversation || !conversation.id) {
+        console.error("Không thể cập nhật: conversation hoặc id không tồn tại");
+        return;
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Hàm mới để gửi tin nhắn và trả về kết quả API
-  const handleSendMessageToApiAndGetResult = async (
-    conversationId: string,
-    content: string,
-    isFirstMessage: boolean
-  ) => {
-    try {
-      const userMessageId = Date.now();
-      const userMessage: Message = {
-        id: userMessageId,
-        content,
-        isUser: true,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
+      const url = getConversationMessageApiUrl(
+        conversation.id
+      ).updateConversation;
 
-      // 2. Create message data for API
-      const messageData = {
-        message: content,
-        model: "gpt-4o-mini", // Default model
-        timestamp: new Date().toISOString(),
-        conversationId,
-        isFirstMessage,
-      };
+      try {
+        if (!isReady) return;
+        await axiosAuth
+          .patch(url, {
+            title: conversation.title,
+            is_archived: conversation.is_archived,
+          })
+          .then(() => {
+            // Cập nhật danh sách conversations
+            setConversations((prev) =>
+              prev.map((conv) =>
+                conv.id === conversation.id ? conversation : conv
+              )
+            );
+          });
+      } catch (error) {
+        console.error("Lỗi khi cập nhật conversation:", error);
+      }
+    },
+    [axiosAuth, isReady]
+  );
+  const sendMessage = useCallback(
+    async (message: string, modelId: string, isFirstMessage: boolean) => {
+      setIsSendingMessage(true);
 
-      // 3. Send to API
-      const response = await fetch("/api/message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(messageData),
+      addMessageToActiveConversation({
+        conversation_id: activeConversation?.id,
+        sender_type: "user",
+        message_type: "text",
+        content: message,
       });
 
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
-      }
-
-      // 4. Parse response
-      const result = await response.json();
-
-      // 5. Create assistant message
-      const assistantMessage: Message = {
-        id: userMessageId + 1,
-        content: result.response || "Sorry, I couldn't process your request.",
-        isUser: false,
-        timestamp: new Date(),
+      const body = {
+        message: message,
+        isFirstMessage: isFirstMessage,
       };
 
-      // 6. Add to messages
-      setMessages((prev) => [...prev, assistantMessage]);
+      try {
+        const response = await axios.post("/api/message", body);
+        const newMessage: Message = {
+          conversation_id: activeConversation?.id,
+          sender_type: "model",
+          model_id: modelId,
+          message_type: "text",
+          content: response.data.response,
+        };
 
-      // Trả về kết quả từ API để xử lý bên ngoài
-      return result;
-    } catch (error) {
-      console.error("Error sending message to API:", error);
-      // Add error message to chat
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          content: "Error: Could not get a response. Please try again.",
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ]);
-      return null;
-    }
-  };
+        let updatedConversation: Conversation | null = null;
 
-  // Load a specific conversation by ID
-  const loadConversation = async (id: string) => {
-    console.log("Loading conversation with ID:", id);
-    setIsLoading(true);
+        // Cập nhật active conversation
+        setActiveConversation((prev: Conversation | null) => {
+          if (prev) {
+            // Tạo conversation đã cập nhật
+            const updated = isFirstMessage
+              ? {
+                  ...prev,
+                  title: response.data.title,
+                  messages: [...(prev.messages || []), newMessage],
+                }
+              : {
+                  ...prev,
+                  messages: [...(prev.messages || []), newMessage],
+                };
 
-    try {
-      // Trong tương lai sẽ gọi API để lấy dữ liệu conversation
-      // const response = await fetch(`/api/conversations/${id}`);
-      // const data = await response.json();
+            // Lưu lại để có thể gọi updateConversation
+            updatedConversation = updated;
+            return updated;
+          }
+          return null;
+        });
 
-      // Tạm thời, tìm conversation trong state hiện tại
-      const conversation = conversations.find((conv) => conv.id === id);
-
-      if (conversation) {
-        // Nếu tìm thấy, đặt làm active conversation
-        setActiveConversation(conversation);
-
-        // Giả lập lấy messages
-        // Trong tương lai sẽ gọi API để lấy messages
-        const messages: Message[] = []; // Tạm thời để trống, sau sẽ gọi API
-        setMessages(messages);
-
-        console.log("Loaded conversation:", conversation);
-      } else {
-        // Nếu không tìm thấy, có thể tạo mới hoặc hiển thị thông báo lỗi
-        console.error("Conversation not found with ID:", id);
-        // Có thể chuyển hướng hoặc tạo mới tùy vào yêu cầu
+        // Nếu là tin nhắn đầu tiên, cập nhật conversation title trong database
+        if (isFirstMessage && updatedConversation) {
+          await updateConversation(updatedConversation);
+        }
+      } catch (error) {
+        console.error("error", error);
+      } finally {
+        setIsSendingMessage(false);
       }
-    } catch (error) {
-      console.error("Error loading conversation:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [addMessageToActiveConversation, activeConversation, updateConversation]
+  );
+  const deleteConversation = useCallback(
+    async (conversationId: string) => {
+      const url =
+        getConversationMessageApiUrl(conversationId).deleteConversation;
+      await axiosAuth
+        .delete(url)
+        .then(() => {
+          setConversations(
+            conversations.filter(
+              (conversation) => conversation.id !== conversationId
+            )
+          );
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    [axiosAuth, conversations]
+  );
 
-  const contextValue = {
-    conversations,
-    activeConversation,
-    messages,
-    isLoading,
-    setActiveConversation,
-    sendMessage,
-    createNewConversation,
-    loadConversation,
-  };
+  const createConversation = useCallback(async () => {
+    const url = getConversationMessageApiUrl().createConversation;
+    await axiosAuth
+      .post(url, {
+        title: "New Conversation",
+      })
+      .then((response) => {
+        setConversations([response.data, ...conversations]);
+        setActiveConversation(response.data);
+      });
+  }, [conversations, axiosAuth]);
 
   return (
-    <ConversationContext.Provider value={contextValue}>
+    <ConversationContext.Provider
+      value={{
+        conversations,
+        activeConversation,
+        setActiveConversation,
+        isLoading,
+        setIsLoading,
+        sendMessage,
+        deleteConversation,
+        updateConversation,
+        createConversation,
+        getConversationById,
+        isSendingMessage,
+        setIsSendingMessage,
+      }}
+    >
       {children}
     </ConversationContext.Provider>
   );

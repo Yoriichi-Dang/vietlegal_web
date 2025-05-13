@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export type DropdownItem = {
   id: string | number;
   name: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   action: () => void;
   leftIcon?: React.ReactNode;
 };

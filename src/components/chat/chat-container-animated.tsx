@@ -1,10 +1,11 @@
 "use client";
 
-import { ChatContainerProps } from "@/types/chat";
+import { Message } from "@/types/chat";
 import ChatMessageAnimated from "./chat-message-animated";
 import { AnimatePresence } from "framer-motion";
 
-interface ChatContainerAnimatedProps extends ChatContainerProps {
+interface ChatContainerAnimatedProps {
+  messages: Message[];
   typingSpeed?: number;
   onTypingComplete?: () => void;
 }
@@ -25,15 +26,17 @@ const ChatContainerAnimated: React.FC<ChatContainerAnimatedProps> = ({
             >
               <div className="md:max-w-3xl sm:max-w-full w-full">
                 <ChatMessageAnimated
-                  content={message.content}
-                  isUser={message.isUser}
+                  content={message.content || ""}
+                  senderType={message.sender_type}
                   messageId={message.id || index}
                   typingSpeed={typingSpeed}
                   isLastMessage={
-                    index === messages.length - 1 && !message.isUser
+                    index === messages.length - 1 &&
+                    message.sender_type !== "user"
                   }
                   onComplete={
-                    index === messages.length - 1 && !message.isUser
+                    index === messages.length - 1 &&
+                    message.sender_type !== "user"
                       ? onTypingComplete
                       : undefined
                   }

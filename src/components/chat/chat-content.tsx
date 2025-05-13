@@ -2,49 +2,29 @@
 import ChatInput from "@/components/chat/chat-input";
 import HeaderAvatar from "@/components/chat/header-avatar";
 import Sidebar from "@/components/chat/sidebar";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ChatContainerAnimated from "@/components/chat/chat-container-animated";
 import { useConversation } from "@/provider/conversation-provider";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useChatState } from "@/hooks/useChatState";
 
 // Create a chat component that will consume the conversation context
 const ChatContent = () => {
-  const {
-    messages: conversationMessages,
-    activeConversation,
-    sendMessage,
-  } = useConversation();
+  const { activeConversation, sendMessage, createConversation } =
+    useConversation();
 
   // Ref for the scrollable container
   const { data: session, status: sessionStatus } = useSession();
   const chatScrollRef = useRef<HTMLDivElement>(null);
-  const [prevMessagesLength, setPrevMessagesLength] = useState(0);
   const [inputValue, setInputValue] = useState(""); // Để theo dõi giá trị input
   const [isLoading, setIsLoading] = useState(true); // State cho loading indicator
   const [isTypingComplete, setIsTypingComplete] = useState(true); // State để kiểm tra nếu đã hoàn tất hiệu ứng đánh máy
   const pathname = usePathname(); // Lấy path hiện tại
-
-  // Sử dụng hook useChatState thay vì state cục bộ
-  const { hasSubmittedFirstMessage, setHasSubmittedFirstMessage } =
-    useChatState();
-
-  // Kiểm tra xem có phải là cuộc trò chuyện mới không
-  const isNewConversation =
-    !activeConversation?.title ||
-    activeConversation.title === "New Conversation" ||
-    conversationMessages.length === 0;
-
   // Thêm useEffect để theo dõi khi conversationMessages thay đổi và cập nhật URL
   useEffect(() => {
     // Chỉ thực hiện khi có activeConversation và có id
-    if (
-      activeConversation?.id &&
-      pathname === "/new" &&
-      conversationMessages.length > 0
-    ) {
+    if (activeConversation?.id && pathname === "/new") {
       // Thay đổi URL mà không gây reload trang
       const newUrl = `/c/${activeConversation.id}`;
       window.history.pushState(
@@ -53,7 +33,7 @@ const ChatContent = () => {
         newUrl
       );
     }
-  }, [activeConversation?.id, conversationMessages.length, pathname]);
+  }, [activeConversation?.id, pathname]);
 
   // Thiết lập loading
   useEffect(() => {
@@ -72,68 +52,64 @@ const ChatContent = () => {
     };
   }, [sessionStatus]);
 
-  // Smooth scroll function using Web Animation API
-  const scrollToBottom = () => {
-    if (chatScrollRef.current) {
-      const scrollElement = chatScrollRef.current;
-      const scrollHeight = scrollElement.scrollHeight;
-
-      // Using the Web Animation API for smooth scrolling
-      scrollElement.animate(
-        [{ scrollTop: scrollElement.scrollTop }, { scrollTop: scrollHeight }],
-        {
-          duration: 600, // Duration in milliseconds
-          easing: "cubic-bezier(0.45, 0, 0.55, 1)", // Smooth easing function
-          fill: "forwards",
-        }
-      );
-    }
-  };
-
-  // Scroll to bottom when messages change (new message added)
-  useEffect(() => {
-    // Check if messages actually increased (a new message was added)
-    if (conversationMessages.length > prevMessagesLength) {
-      // Đánh dấu đã gửi tin nhắn đầu tiên
-      if (!hasSubmittedFirstMessage && conversationMessages.length > 0) {
-        setHasSubmittedFirstMessage(true);
-      }
-
-      // Set a small timeout to ensure DOM has updated
-      setTimeout(scrollToBottom, 100);
-      setPrevMessagesLength(conversationMessages.length);
-    }
-  }, [
-    conversationMessages.length,
-    prevMessagesLength,
-    hasSubmittedFirstMessage,
-  ]);
-
   // Xử lý khi hiệu ứng đánh máy hoàn tất
   const handleTypingComplete = () => {
     setIsTypingComplete(true);
   };
 
   // Xử lý gửi tin nhắn
-  const handleSubmit = async (inputMsg: string) => {
-    if (!inputMsg.trim() || !isTypingComplete) return;
+  // const handleSubmit = async (inputMsg: string, modelId: string) => {
+  //   if (!inputMsg.trim() || !isTypingComplete) return;
 
-    // Set state đã gửi tin nhắn đầu tiên
-    setHasSubmittedFirstMessage(true);
+  //   // Set state đã gửi tin nhắn đầu tiên
 
-    // Đặt trạng thái đang hiển thị hiệu ứng
-    setIsTypingComplete(false);
+  //   // Đặt trạng thái đang hiển thị hiệu ứng
+  //   setIsTypingComplete(false);
+  //   try {
+  //     if (!activeConversation) {
+  //       await createConversation();
+  //     }
+  //     if (activeConversation) {
+  //       await sendMessage(inputMsg, modelId);
+  //       setInputValue("");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error sending message:", error);
+  //     setIsTypingComplete(true);
+  //   }
+  // };
 
-    try {
-      // Gửi tin nhắn trực tiếp, để hàm sendMessage xử lý việc tạo conversation nếu cần
-      console.log("Sending message:", inputMsg);
-      await sendMessage(inputMsg);
-      setInputValue("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-      setIsTypingComplete(true);
-    }
-  };
+  const handleSubmit = useCallback(
+    async (inputMsg: string, modelId: string) => {
+      if (!inputMsg.trim() || !isTypingComplete) return;
+      setIsTypingComplete(false);
+      try {
+        if (!activeConversation) {
+          await createConversation();
+          await sendMessage(inputMsg, modelId, true); // Conversation mới, tin nhắn đầu tiên
+        } else {
+          // Kiểm tra xem đây có phải là tin nhắn đầu tiên không
+          const isFirstMessage =
+            !activeConversation.messages ||
+            activeConversation.messages.length === 0;
+          await sendMessage(inputMsg, modelId, isFirstMessage);
+        }
+        setInputValue("");
+      } catch (error) {
+        console.error("Error sending message:", error);
+      } finally {
+        setIsTypingComplete(true);
+      }
+    },
+    [
+      activeConversation,
+      createConversation,
+      sendMessage,
+      isTypingComplete,
+      setInputValue,
+      setIsTypingComplete,
+    ]
+  );
 
   // Hiển thị loading spinner khi đang tải
   if (isLoading) {
@@ -156,14 +132,14 @@ const ChatContent = () => {
       >
         {/* Hiển thị các tin nhắn khi đã có, hoặc sau khi gửi tin nhắn đầu tiên */}
         <AnimatePresence>
-          {(conversationMessages.length > 0 || hasSubmittedFirstMessage) && (
+          {activeConversation && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex-1 overflow-hidden relative"
             >
               <ChatContainerAnimated
-                messages={conversationMessages}
+                messages={activeConversation?.messages || []}
                 typingSpeed={20}
                 onTypingComplete={handleTypingComplete}
               />
@@ -173,7 +149,7 @@ const ChatContent = () => {
 
         {/* Hiển thị ChatInput ở giữa màn hình khi chưa có tin nhắn */}
         <AnimatePresence>
-          {isNewConversation && !hasSubmittedFirstMessage ? (
+          {!activeConversation ? (
             <motion.div
               className="absolute top-0 left-0 right-0 bottom-0 flex flex-col items-center justify-center p-4"
               initial={{ opacity: 0, y: 20 }}

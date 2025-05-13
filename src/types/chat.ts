@@ -1,39 +1,72 @@
-// Types cho ứng dụng chat
+// types/chat.ts
 
-// Type cho một tin nhắn
-export interface Message {
-  content: string; // Nội dung tin nhắn
-  isUser: boolean; // true nếu tin nhắn từ người dùng, false nếu từ chatbot
-  timestamp?: Date; // Thời gian gửi tin nhắn (tùy chọn)
-  id?: string | number; // ID duy nhất cho tin nhắn (tùy chọn)
-}
-
-// Props cho ChatMessage component
-export interface ChatMessageProps {
-  content: string;
-  isUser: boolean;
-}
-
-// Props cho ChatContainer component
-export interface ChatContainerProps {
-  messages: Message[];
-  title?: string;
-}
-
-// Có thể mở rộng thêm các types khác nếu cần
-// Ví dụ: type cho người dùng, loại tin nhắn, v.v.
-export interface User {
-  id: string;
+export interface AIModel {
+  model_id: string;
   name: string;
-  avatar?: string;
+  provider: string;
+  description: string;
 }
 
-// Ví dụ: type cho toàn bộ cuộc hội thoại
+export interface Attachment {
+  id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  message_id: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Message {
+  id?: string;
+  model_id?: string;
+  conversation_id?: string;
+  sender_type: "user" | "model" | "system";
+  content?: string;
+  message_type: "text" | "image" | "file" | "audio";
+  attachments?: Attachment[];
+  model?: AIModel;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
 export interface Conversation {
   id: string;
   title?: string;
+  is_archived: boolean;
+  user_id: string;
   messages: Message[];
-  participants: User[];
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Response types for API calls
+export interface ConversationsResponse {
+  conversations: Conversation[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ConversationResponse {
+  conversation: Conversation;
+  messages: Message[];
+}
+
+// Request types for API calls
+export interface CreateMessageRequest {
+  conversation_id: string;
+  content?: string;
+  model_id?: string;
+  message_type?: "text" | "image" | "file" | "audio";
+}
+
+export interface CreateConversationRequest {
+  title?: string;
+}
+
+export interface UpdateConversationRequest {
+  title?: string;
+  is_archived?: boolean;
 }

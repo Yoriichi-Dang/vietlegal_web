@@ -5,15 +5,15 @@ import { Plus, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
-import Image from "next/image";
 import { useConversation } from "@/provider/conversation-provider";
+import { useModelAI } from "@/hooks/useModelAI";
 
 // Thêm prop 'centered' để xác định vị trí hiển thị
 interface ChatInputProps {
   centered?: boolean;
   value?: string;
   onChange?: (value: string) => void;
-  onSubmit?: (message: string) => Promise<void>;
+  onSubmit?: (message: string, modelId: string) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -29,14 +29,13 @@ export default function ChatInput({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [model, setModel] = useState("model");
+  const { data: models } = useModelAI();
 
   // Use conversation context nếu không có prop onSubmit
-  const { sendMessage: contextSendMessage, isLoading: contextIsLoading } =
-    useConversation();
+  const { isSendingMessage } = useConversation();
 
   // Sử dụng prop value hoặc state nội bộ
   const inputValue = value !== undefined ? value : localInputValue;
-  const isLoading = contextIsLoading;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
@@ -62,14 +61,14 @@ export default function ChatInput({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading || disabled) return;
+    if (!inputValue.trim() || isSendingMessage) return;
 
     try {
       // Sử dụng onSubmit từ props hoặc sendMessage từ context
       if (onSubmit) {
-        await onSubmit(inputValue);
+        await onSubmit(inputValue, model);
       } else {
-        await contextSendMessage(inputValue);
+        // await contextSendMessage(inputValue);
       }
 
       // Reset form nếu sử dụng state nội bộ
@@ -94,7 +93,7 @@ export default function ChatInput({
   // Xử lý sự kiện nhấn phím
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Nếu nhấn Enter và không giữ Shift và không disabled
-    if (e.key === "Enter" && !e.shiftKey && !disabled) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault(); // Ngăn không cho xuống dòng mặc định
       handleSubmit(e); // Gọi hàm submit
     }
@@ -242,36 +241,13 @@ export default function ChatInput({
       action: () => console.log("Upload from computer clicked"),
     },
   ];
-
+  const modelItems = models?.map((model) => ({
+    id: model.model_id,
+    name: model.name,
+    icons: null,
+    action: () => setModel(model.model_id),
+  }));
   // Define model dropdown items
-  const modelItems: DropdownItem[] = [
-    {
-      id: "gemma",
-      name: "Gemma",
-      icon: (
-        <Image
-          src="https://registry.npmmirror.com/@lobehub/icons-static-png/latest/files/dark/gemma-color.png"
-          alt="GPT-4"
-          width={25}
-          height={25}
-        />
-      ),
-      action: () => setModel("gemma"),
-    },
-    {
-      id: "llama",
-      name: "Llama",
-      icon: (
-        <Image
-          src="https://static.vecteezy.com/system/resources/thumbnails/002/589/005/small/cute-llama-wild-animal-line-style-icon-free-vector.jpg"
-          alt="Llama"
-          width={25}
-          height={25}
-        />
-      ),
-      action: () => setModel("llama"),
-    },
-  ];
 
   return (
     <motion.div
@@ -288,7 +264,7 @@ export default function ChatInput({
         className={cn(
           "bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700/50",
           centered ? "transform-gpu" : "",
-          disabled ? "opacity-60" : ""
+          isSendingMessage || disabled ? "opacity-60" : ""
         )}
       >
         {/* Form with textarea */}
@@ -310,7 +286,7 @@ export default function ChatInput({
                 "text-base"
               )}
               rows={1}
-              disabled={isLoading || disabled}
+              disabled={isSendingMessage || disabled}
             />
 
             {/* Hiển thị thông báo lỗi nếu có */}
@@ -330,37 +306,37 @@ export default function ChatInput({
                 className="min-w-[280px]"
                 itemClassName="transition-colors duration-150"
                 titleIcon={<Plus size={18} />}
-                disabled={disabled}
+                disabled={isSendingMessage || disabled}
               />
 
-              <DropDownAnimation
-                items={modelItems}
-                className="w-52"
-                containerClassName="space-y-1"
-                itemClassName="hover:bg-zinc-700/50"
-                title={model}
-                titleIcon={<ChevronUp size={16} />}
-                disabled={disabled}
-              />
+              {modelItems && (
+                <DropDownAnimation
+                  items={modelItems}
+                  className="w-36"
+                  containerClassName="space-y-1"
+                  itemClassName="hover:bg-zinc-700/50"
+                  title={model}
+                  titleIcon={<ChevronUp size={16} />}
+                  disabled={isSendingMessage || disabled}
+                />
+              )}
             </div>
 
             <div className="flex items-center gap-1">
               <motion.button
                 type="submit"
-                disabled={!inputValue.trim() || isLoading || disabled}
+                disabled={!inputValue.trim() || isSendingMessage || disabled}
                 whileTap={
-                  inputValue.trim() && !isLoading && !disabled
-                    ? { scale: 0.95 }
-                    : {}
+                  inputValue.trim() && !isSendingMessage ? { scale: 0.95 } : {}
                 }
                 className={cn(
                   "p-2 rounded-full transition-colors relative",
-                  inputValue.trim() && !isLoading && !disabled
+                  inputValue.trim() && !isSendingMessage
                     ? "bg-primary text-white hover:bg-primary/90"
                     : "dark:bg-zinc-800 ring-2 ring-zinc-200 dark:ring-zinc-700/50 bg-zinc-100 text-zinc-500 cursor-not-allowed"
                 )}
               >
-                {isLoading || disabled ? (
+                {isSendingMessage || disabled ? (
                   <span className="block w-5 h-5 border-2 border-t-transparent border-white dark:border-zinc-500 dark:border-t-transparent rounded-full animate-spin"></span>
                 ) : (
                   <svg
