@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import NewChatIcon from "../icons/new-chat-icon";
-import ToggleSidebarIcon from "../icons/toggle-sidebar-icon";
-import MenuIcon from "../icons/menu-icon";
+import NewChatIcon from "../../icons/new-chat-icon";
+import ToggleSidebarIcon from "../../icons/toggle-sidebar-icon";
+import MenuIcon from "../../icons/menu-icon";
 import { Search } from "lucide-react";
 import { useEffect } from "react";
 import { useState } from "react";

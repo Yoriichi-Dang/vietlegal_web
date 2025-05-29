@@ -1,370 +1,233 @@
-"use client";
+import React from "react";
+import { useRef } from "react";
+import { IconPaperclip, IconSend, IconX } from "@tabler/icons-react";
+import { motion, AnimatePresence } from "motion/react";
+import { getFileIcon } from "./chat-interface";
 
-import React, { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { Plus, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import DropDownAnimation, { DropdownItem } from "./dropdown-animation";
-import { useConversation } from "@/provider/conversation-provider";
-import { useModelAI } from "@/hooks/useModelAI";
-import { AIModel } from "@/types/chat";
-
-// Thêm prop 'centered' để xác định vị trí hiển thị
-interface ChatInputProps {
-  centered?: boolean;
-  value?: string;
-  onChange?: (value: string) => void;
-  onSubmit?: (message: string, modelId: string) => Promise<void>;
-  disabled?: boolean;
+export interface AttachedFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
 }
 
-export default function ChatInput({
-  centered = false,
-  value,
-  onChange,
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return (
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  );
+};
+
+type Props = {
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  attachedFiles: AttachedFile[];
+  handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  isLoading: boolean;
+  input: string;
+  removeFile: (fileId: string) => void; // Thêm prop này
+};
+
+const ChatInput = ({
   onSubmit,
-  disabled = false,
-}: ChatInputProps) {
-  // Nếu không có prop từ bên ngoài, sử dụng state nội bộ
-  const [localInputValue, setLocalInputValue] = useState("");
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [model, setModel] = useState<AIModel | null>(null);
-  const { data: models } = useModelAI();
-  useEffect(() => {
-    if (models) {
-      setModel(models[0]);
-    }
-  }, [models]);
-  // Use conversation context nếu không có prop onSubmit
-  const { isSendingMessage } = useConversation();
-
-  // Sử dụng prop value hoặc state nội bộ
-  const inputValue = value !== undefined ? value : localInputValue;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-
-    // Cập nhật giá trị qua prop hoặc state nội bộ
-    if (onChange) {
-      onChange(newValue);
-    } else {
-      setLocalInputValue(newValue);
-    }
-
-    // Reset error message khi người dùng tiếp tục nhập
-    if (submitError) {
-      setSubmitError(null);
-    }
-
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isSendingMessage) return;
-
-    try {
-      // Sử dụng onSubmit từ props hoặc sendMessage từ context
-      if (onSubmit) {
-        await onSubmit(inputValue, model?.model_id as string);
-      } else {
-        // await contextSendMessage(inputValue);
-      }
-
-      // Reset form nếu sử dụng state nội bộ
-      if (!onChange) {
-        setLocalInputValue("");
-      }
-
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
-    } catch (error) {
-      console.error("Lỗi gửi tin nhắn:", error);
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Có lỗi xảy ra khi gửi tin nhắn"
-      );
-    }
-  };
-
-  // Xử lý sự kiện nhấn phím
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Nếu nhấn Enter và không giữ Shift và không disabled
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault(); // Ngăn không cho xuống dòng mặc định
-      handleSubmit(e); // Gọi hàm submit
-    }
-    // Nếu nhấn Shift+Enter thì sẽ xuống dòng bình thường (không cần xử lý gì thêm)
-  };
-
-  // Style variants để animation
-  const containerVariants = {
-    centered: {
-      width: "100%",
-      maxWidth: "800px",
-      scale: 1.05,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        duration: 0.7,
-      },
-    },
-    bottom: {
-      width: "100%",
-      scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        duration: 0.7,
-      },
-    },
-  };
-
-  // Tool items
-  const toolItems: DropdownItem[] = [
-    {
-      id: "google-drive",
-      name: "Connect to Google Drive",
-      icon: (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 14L11.2929 14.7071L12 15.4142L12.7071 14.7071L12 14ZM12 4L12 14L13 14L13 4L12 4Z"
-            fill="#4285F4"
-          />
-          <path
-            d="M8 9L12 5L16 9"
-            stroke="#4285F4"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M6 20H18"
-            stroke="#4285F4"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      ),
-      action: () => console.log("Connect to Google Drive clicked"),
-    },
-    {
-      id: "onedrive",
-      name: "Connect to Microsoft OneDrive",
-      icon: (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 14L11.2929 14.7071L12 15.4142L12.7071 14.7071L12 14ZM12 4L12 14L13 14L13 4L12 4Z"
-            fill="#0078D4"
-          />
-          <path
-            d="M8 9L12 5L16 9"
-            stroke="#0078D4"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M6 20H18"
-            stroke="#0078D4"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      ),
-      action: () => console.log("Connect to Microsoft OneDrive clicked"),
-      leftIcon: (
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M9 18L15 12L9 6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "upload",
-      name: "Upload from computer",
-      icon: (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 14L11.2929 14.7071L12 15.4142L12.7071 14.7071L12 14ZM12 4L12 14L13 14L13 4L12 4Z"
-            fill="#6B7280"
-          />
-          <path
-            d="M8 9L12 5L16 9"
-            stroke="#6B7280"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M6 20H18"
-            stroke="#6B7280"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      ),
-      action: () => console.log("Upload from computer clicked"),
-    },
-  ];
-  const modelItems = models?.map((model) => ({
-    id: model.model_id,
-    name: model.name,
-    icons: null,
-    action: () => setModel(model),
-  }));
-  // Define model dropdown items
+  attachedFiles,
+  handleFileUpload,
+  handleInputChange,
+  isLoading,
+  input,
+  removeFile,
+}: Props) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <motion.div
-      className={cn(
-        "max-w-3xl mx-auto mb-10",
-        centered ? "max-w-2xl" : "max-w-3xl"
-      )}
-      variants={containerVariants}
-      initial={false}
-      animate={centered ? "centered" : "bottom"}
-      transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
-    >
-      <div
-        className={cn(
-          "bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700/50 mx-auto shadow-xl ring-1 ring-zinc-200 dark:ring-zinc-700/50",
-          centered ? "transform-gpu" : "",
-          isSendingMessage || disabled ? "opacity-60" : ""
-        )}
-      >
-        {/* Form with textarea */}
-        <form onSubmit={handleSubmit}>
-          <div className="relative">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                centered ? "Hỏi điều gì đó..." : "Enter your message here..."
-              }
-              className={cn(
-                "w-full border-0 rounded-xl px-4 py-3 resize-none",
-                "dark:text-white text-black placeholder-zinc-400",
-                "focus:outline-none focus:ring-0",
-                "min-h-[44px] max-h-[150px]",
-                "text-base"
-              )}
-              rows={1}
-              disabled={isSendingMessage || disabled}
-            />
+    <div className="px-4 md:px-6 pb-4 md:pb-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Attached Files */}
+        <AnimatePresence>
+          {attachedFiles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 md:mb-4 flex flex-wrap gap-2"
+            >
+              {attachedFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-neutral-800 to-neutral-700 rounded-xl px-3 md:px-4 py-2 text-sm border border-neutral-600 shadow-lg"
+                >
+                  <div className="text-blue-400">{getFileIcon(file.type)}</div>
+                  <span className="text-neutral-200 max-w-[100px] md:max-w-[150px] truncate font-medium">
+                    {file.name}
+                  </span>
+                  <span className="text-neutral-400 text-xs">
+                    ({formatFileSize(file.size)})
+                  </span>
+                  <button
+                    onClick={() => removeFile(file.id)}
+                    className="text-neutral-400 hover:text-red-400 transition-colors ml-1 hover:scale-110 transform"
+                  >
+                    <IconX className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {/* Hiển thị thông báo lỗi nếu có */}
-            {submitError && (
-              <div className="absolute -top-6 left-0 text-xs text-red-500">
-                {submitError}
+        {/* Enhanced Input Form */}
+        <form onSubmit={onSubmit} className="relative">
+          <div className="relative bg-gradient-to-r from-neutral-800/80 to-neutral-700/80 backdrop-blur-xl rounded-2xl border border-neutral-600/50 shadow-2xl overflow-hidden">
+            {/* Animated border gradient */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+            <div className="relative flex items-center p-1 md:p-2">
+              {/* Left Actions */}
+              <div className="flex items-center gap-1 pl-1 md:pl-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                />
+                <motion.button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 md:p-3 text-neutral-400 hover:text-blue-400 transition-all duration-200 rounded-xl hover:bg-neutral-700/50 group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <IconPaperclip className="h-4 w-4 md:h-5 md:w-5 relative z-10" />
+                </motion.button>
+
+                {/* <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="p-2 md:p-3 text-neutral-400 hover:text-green-400 transition-all duration-200 rounded-xl hover:bg-neutral-700/50 group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <IconMicrophone className="h-4 w-4 md:h-5 md:w-5 relative z-10" />
+                </motion.button> */}
               </div>
-            )}
-          </div>
 
-          {/* Buttons row */}
-          <div className="flex items-center mt-1 px-3 pb-2 justify-between">
-            <div className="flex items-center gap-3">
-              {/* Plus button with dropdown */}
-              <DropDownAnimation
-                items={toolItems}
-                className="min-w-[280px]"
-                itemClassName="transition-colors duration-150"
-                titleIcon={<Plus size={18} />}
-                disabled={isSendingMessage || disabled}
-              />
+              {/* Input Field */}
+              <div className="flex-1 relative mx-2 md:mx-3">
+                <input
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder="Ask me something..."
+                  disabled={isLoading}
+                  className="w-full bg-transparent text-neutral-100 placeholder-neutral-400 py-3 md:py-4 px-2 md:px-4 focus:outline-none text-sm md:text-base font-medium disabled:opacity-70 transition-opacity"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      onSubmit(e as any);
+                    }
+                  }}
+                />
 
-              {modelItems && (
-                <DropDownAnimation
-                  items={modelItems}
-                  className="w-36"
-                  containerClassName="space-y-1"
-                  itemClassName="hover:bg-zinc-700/50"
-                  title={model?.name || "Select Model"}
-                  titleIcon={<ChevronUp size={16} />}
-                  disabled={isSendingMessage || disabled}
+                {/* Animated underline */}
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-0 focus-within:opacity-100 transition-opacity duration-300" />
+              </div>
+
+              {/* Send Button */}
+              <div className="pr-1 md:pr-2">
+                <motion.button
+                  type="submit"
+                  disabled={
+                    (!input.trim() && attachedFiles.length === 0) || isLoading
+                  }
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative p-2 md:p-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-neutral-700 disabled:to-neutral-600 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:shadow-none group overflow-hidden min-w-[40px] min-h-[40px] md:min-w-[48px] md:min-h-[48px] flex items-center justify-center"
+                >
+                  {/* Animated background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-200" />
+
+                  <AnimatePresence mode="wait">
+                    {isLoading ? (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0, rotate: 0 }}
+                        animate={{ opacity: 1, rotate: 360 }}
+                        exit={{ opacity: 0 }}
+                        transition={{
+                          rotate: {
+                            duration: 1,
+                            repeat: Number.POSITIVE_INFINITY,
+                            ease: "linear",
+                          },
+                          opacity: { duration: 0.2 },
+                        }}
+                        className="relative z-10"
+                      >
+                        <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="send"
+                        initial={{ opacity: 0, x: 5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -5 }}
+                        transition={{ duration: 0.2 }}
+                        className="relative z-10"
+                      >
+                        <IconSend className="h-4 w-4 md:h-5 md:w-5" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Loading progress bar */}
+            <AnimatePresence>
+              {isLoading && (
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  exit={{ scaleX: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 origin-left"
                 />
               )}
-            </div>
-
-            <div className="flex items-center gap-1">
-              <motion.button
-                type="submit"
-                disabled={!inputValue.trim() || isSendingMessage || disabled}
-                whileTap={
-                  inputValue.trim() && !isSendingMessage ? { scale: 0.95 } : {}
-                }
-                className={cn(
-                  "p-2 rounded-full transition-colors relative",
-                  inputValue.trim() && !isSendingMessage
-                    ? "bg-primary text-white hover:bg-primary/90"
-                    : "dark:bg-zinc-800 ring-2 ring-zinc-200 dark:ring-zinc-700/50 bg-zinc-100 text-zinc-500 cursor-not-allowed"
-                )}
-              >
-                {isSendingMessage || disabled ? (
-                  <span className="block w-5 h-5 border-2 border-t-transparent border-white dark:border-zinc-500 dark:border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <svg
-                    width={centered ? "20" : "18"}
-                    height={centered ? "20" : "18"}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 19V5M12 5L5 12M12 5L19 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </motion.button>
-            </div>
+            </AnimatePresence>
           </div>
+
+          {/* Floating suggestions (hidden on mobile for space) */}
+          {!input && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute -top-12 md:-top-16 left-0 right-0 hidden md:flex justify-center"
+            >
+              <div className="flex gap-2 items-center  bg-neutral-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-neutral-700/50">
+                <span className="text-neutral-400 text-sm">Try:</span>
+                <button className="text-blue-400 text-sm hover:text-blue-300 transition-colors">
+                  "Help me with..."
+                </button>
+                <span className="text-neutral-600">•</span>
+                <button className="text-purple-400 text-sm hover:text-purple-300 transition-colors">
+                  "Explain..."
+                </button>
+              </div>
+            </motion.div>
+          )}
         </form>
       </div>
-    </motion.div>
+    </div>
   );
-}
+};
+
+export default ChatInput;

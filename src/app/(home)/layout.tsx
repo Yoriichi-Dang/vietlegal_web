@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
-import ConversationProvider from "@/provider/conversation-provider";
+import { ChatProvider } from "@/provider/chat-provider";
 const HomeLayout = ({ children }: { children: React.ReactNode }) => {
-  return <ConversationProvider>{children}</ConversationProvider>;
+  return <ChatProvider>{children}</ChatProvider>;
 };
 
 export default HomeLayout;

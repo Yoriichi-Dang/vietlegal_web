@@ -17,8 +17,7 @@ type TokenResponse = {
 export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
   pages: {
-    signIn: "/login",
-    newUser: "/register",
+    signIn: "/auth",
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

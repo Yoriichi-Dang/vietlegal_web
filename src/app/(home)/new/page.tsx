@@ -1,7 +1,13 @@
 "use client";
-import ChatContent from "@/components/chat/chat-content";
+
+import ChatbotApp from "@/components/chat/chat-app";
+import { ConversationProvider } from "@/provider/conversation-provider";
 const Page = () => {
-  return <ChatContent />;
+  return (
+    <ConversationProvider>
+      <ChatbotApp />
+    </ConversationProvider>
+  );
 };
 
 export default Page;

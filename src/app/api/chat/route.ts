@@ -1,0 +1,15 @@
+// app/api/chat/route.ts - Version đơn giản để test
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  console.log(messages);
+
+  const result = streamText({
+    model: openai("gpt-4o"),
+    messages,
+  });
+
+  return result.toDataStreamResponse();
+}

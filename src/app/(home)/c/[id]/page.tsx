@@ -1,5 +1,5 @@
 "use client";
-import ChatContent from "@/components/chat/chat-content";
+import ChatContent from "@/components/chat/old/chat-content";
 
 // Main component
 const ConversationPage = () => {

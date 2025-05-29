@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import SidebarTool from "./sidebar-tool";
 import SidebarChatItem from "./sidebar-chat-item";
@@ -237,7 +236,7 @@ const Sidebar = () => {
                         )}
 
                         {/* Bottom section for upgrade */}
-                        <div className="p-2 border-t border-gray-200 dark:border-gray-800 my-4">
+                        {/* <div className="p-2 border-t border-gray-200 dark:border-gray-800 my-4">
                           <div
                             className={cn(
                               "flex items-center gap-3 py-3 px-3 rounded-md cursor-pointer",
@@ -253,7 +252,7 @@ const Sidebar = () => {
                               Upgrade plan
                             </span>
                           </div>
-                        </div>
+                        </div> */}
                       </div>
                     </ScrollArea>
                   </div>
