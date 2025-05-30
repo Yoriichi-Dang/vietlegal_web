@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMousePosition } from "@/hooks/use-mouse-position";
+import { useMousePosition } from "@/hooks/useMousePosition";
 
 interface SparklesProps {
   id?: string;

@@ -25,6 +25,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { signOut, useSession } from "next-auth/react";
+import useAxiosAuth from "@/hooks/useAxiosAuth";
+import { profileApiUrl } from "@/utils/config";
 
 interface UserAvatarMenuProps {
   className?: string;
@@ -33,15 +35,7 @@ interface UserAvatarMenuProps {
 export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
-  //   const [userInfo, setUserInfo] = useState({
-  //     name: "John Doe",
-  //     email: "john.doe@example.com",
-  //     phone: "+1 (555) 123-4567",
-  //     location: "San Francisco, CA",
-  //     bio: "AI enthusiast and product designer",
-  //     joinDate: "January 2024",
-  //     avatar: "/placeholder.svg?height=80&width=80", // Add avatar field
-  //   });
+
   const { data: session } = useSession();
 
   const menuItems = [
@@ -92,10 +86,6 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
     } else {
       setActiveDialog(itemId);
     }
-  };
-
-  const handleUpdateProfile = (field: string, value: string) => {
-    setUserInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -200,7 +190,7 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
         {activeDialog === "profile" && (
           <ProfileDialog
             onClose={() => setActiveDialog(null)}
-            onUpdate={handleUpdateProfile}
+            onUpdate={() => {}}
           />
         )}
       </AnimatePresence>
@@ -289,7 +279,8 @@ function ProfileDialog({
 
       toast.success("Cập nhật thông tin thành công!");
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      console.log(error);
       toast.error("Có lỗi xảy ra khi cập nhật thông tin");
     } finally {
       setIsSubmitting(false);
@@ -333,7 +324,8 @@ function ProfileDialog({
 
       setAvatar(cloudinaryUrl);
       toast.success("Upload ảnh đại diện thành công!");
-    } catch (error) {
+    } catch (error: any) {
+      console.log(error);
       toast.error("Có lỗi xảy ra khi upload ảnh đại diện");
       setAvatar(session?.user?.image || null);
     } finally {
@@ -528,7 +520,7 @@ function AccountDialog({ onClose }: { onClose: () => void }) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isPending, setIsPending] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const { axiosAuth, isReady } = useAxiosAuth();
 
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
@@ -549,11 +541,15 @@ function AccountDialog({ onClose }: { onClose: () => void }) {
     try {
       // Simulate API call - replace with actual API call
       // await axiosAuth.patch(profileApiUrl.changePassword, payload)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast.success("Thay đổi mật khẩu thành công!");
-      form.reset();
-    } catch (error) {
+      if (isReady) {
+        axiosAuth.patch(profileApiUrl.changePassword, payload).then(() => {
+          toast.success("Thay đổi mật khẩu thành công!");
+          form.reset();
+          setIsPending(false);
+        });
+      }
+    } catch (error: any) {
+      console.log(error);
       toast.error("Có lỗi xảy ra khi thay đổi mật khẩu");
     } finally {
       setIsPending(false);

@@ -1,8 +1,17 @@
-import React from "react";
+"use client";
+
+import type React from "react";
 import { useRef } from "react";
-import { IconPaperclip, IconSend, IconX } from "@tabler/icons-react";
+import {
+  IconPaperclip,
+  IconSend,
+  IconX,
+  IconFile,
+  IconPhoto,
+  IconFileText,
+  IconVideo,
+} from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
-import { getFileIcon } from "./chat-interface";
 
 export interface AttachedFile {
   id: string;
@@ -22,6 +31,14 @@ const formatFileSize = (bytes: number) => {
   );
 };
 
+const getFileIcon = (type: string) => {
+  if (type.startsWith("image/")) return <IconPhoto className="h-4 w-4" />;
+  if (type.startsWith("video/")) return <IconVideo className="h-4 w-4" />;
+  if (type.includes("pdf") || type.includes("document"))
+    return <IconFileText className="h-4 w-4" />;
+  return <IconFile className="h-4 w-4" />;
+};
+
 type Props = {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   attachedFiles: AttachedFile[];
@@ -29,7 +46,7 @@ type Props = {
   handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   isLoading: boolean;
   input: string;
-  removeFile: (fileId: string) => void; // Thêm prop này
+  removeFile: (fileId: string) => void;
 };
 
 const ChatInput = ({
@@ -109,16 +126,6 @@ const ChatInput = ({
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                   <IconPaperclip className="h-4 w-4 md:h-5 md:w-5 relative z-10" />
                 </motion.button>
-
-                {/* <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 md:p-3 text-neutral-400 hover:text-green-400 transition-all duration-200 rounded-xl hover:bg-neutral-700/50 group relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                  <IconMicrophone className="h-4 w-4 md:h-5 md:w-5 relative z-10" />
-                </motion.button> */}
               </div>
 
               {/* Input Field */}
@@ -212,7 +219,7 @@ const ChatInput = ({
               animate={{ opacity: 1, y: 0 }}
               className="absolute -top-12 md:-top-16 left-0 right-0 hidden md:flex justify-center"
             >
-              <div className="flex gap-2 items-center  bg-neutral-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-neutral-700/50">
+              <div className="flex gap-2 items-center bg-neutral-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-neutral-700/50">
                 <span className="text-neutral-400 text-sm">Try:</span>
                 <button className="text-blue-400 text-sm hover:text-blue-300 transition-colors">
                   "Help me with..."

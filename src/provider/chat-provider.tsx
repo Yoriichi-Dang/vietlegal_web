@@ -1,13 +1,7 @@
 "use client";
 
 import type React from "react";
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import { useChatApi } from "@/hooks/useChatApi";
 import type {
   Chat,
@@ -30,43 +24,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     chats,
     isLoadingChats,
     fetchChat,
-    refetchChats,
     createChat: apiCreateChat,
-    updateTitle: apiUpdateTitle,
-    deleteChat: apiDeleteChat,
     addMessage: apiAddMessage,
     isCreatingChat,
     isUpdatingTitle,
     isDeletingChat,
     isAddingMessage,
   } = useChatApi();
-
-  // Memoized loading state
-  const isLoading = useMemo(() => {
-    return (
-      isLoadingChats ||
-      isCreatingChat ||
-      isUpdatingTitle ||
-      isDeletingChat ||
-      isAddingMessage
-    );
-  }, [
-    isLoadingChats,
-    isCreatingChat,
-    isUpdatingTitle,
-    isDeletingChat,
-    isAddingMessage,
-  ]);
-
-  // Create new chat
   const createNewChat = useCallback(
-    async (data?: CreateChatRequest): Promise<Chat | null> => {
+    async (data?: CreateChatRequest) => {
       try {
         setError(null);
-        //gen title from first message
-
         const newChat = await apiCreateChat(data || {});
-        setCurrentChat(newChat);
+        setCurrentChat({
+          id: newChat.id,
+          title: newChat.title,
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isActive: true,
+          isArchived: true,
+        });
         return newChat;
       } catch (error) {
         const errorMessage =
@@ -79,209 +57,172 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     },
     [apiCreateChat]
   );
-
-  // Select and fetch chat
   const selectChat = useCallback(
-    async (chatId: string): Promise<void> => {
+    async (chatId: string) => {
       try {
         setError(null);
-
-        // Check if chat is already loaded
-        if (currentChat?.id === chatId) {
-          return;
-        }
-
-        // Try to find in cached chats first
-        const cachedChat = chats.find((chat) => chat.id === chatId);
-        if (cachedChat && cachedChat.messages?.length > 0) {
-          setCurrentChat(cachedChat);
-          return;
-        }
-
-        // Fetch full chat data
         const chat = await fetchChat(chatId);
-        if (chat) {
-          setCurrentChat(chat);
-        } else {
-          setError("Không tìm thấy cuộc trò chuyện");
-        }
+        setCurrentChat(chat);
       } catch (error) {
         const errorMessage =
           error instanceof Error
             ? error.message
-            : "Không thể tải cuộc trò chuyện";
+            : "Không thể chọn cuộc trò chuyện";
         setError(errorMessage);
       }
     },
-    [currentChat?.id, chats, fetchChat]
+    [fetchChat]
   );
-
-  // Add message to current chat
   const addMessage = useCallback(
     async (
+      chatId: string,
       message: Omit<ChatMessage, "id" | "createdAt" | "updatedAt">
-    ): Promise<void> => {
-      if (!currentChat) {
-        setError("Không có cuộc trò chuyện nào được chọn");
-        return;
-      }
-
-      try {
-        setError(null);
-
-        // Optimistically update UI
-        const tempMessage: ChatMessage = {
-          ...message,
-        };
-
+    ) => {
+      const response = await apiAddMessage({
+        chatId,
+        message,
+      });
+      if (response) {
         setCurrentChat((prev) =>
-          prev
-            ? {
-                ...prev,
-                messages: [...prev.messages, tempMessage],
-                updatedAt: new Date(),
-              }
-            : null
+          prev ? { ...prev, messages: [...prev.messages, response] } : null
         );
-        const isFirstMessage =
-          !currentChat || currentChat.messages.length === 0;
-
-        // Send to API
-        await apiAddMessage({
-          chatId: currentChat.id,
-          message,
-          isFirstMessage,
-        });
-      } catch (error) {
-        // Revert optimistic update on error
-        setCurrentChat((prev) =>
-          prev
-            ? {
-                ...prev,
-                messages: prev.messages.filter(
-                  (msg) => !msg.id?.startsWith("temp-")
-                ),
-              }
-            : null
-        );
-
-        const errorMessage =
-          error instanceof Error ? error.message : "Không thể gửi tin nhắn";
-        setError(errorMessage);
       }
     },
-    [currentChat, apiAddMessage]
+    [apiAddMessage]
   );
 
-  // Update chat title
-  const updateChatTitle = useCallback(
-    async (chatId: string, title: string): Promise<void> => {
-      try {
-        setError(null);
-        await apiUpdateTitle({ chatId, title });
+  // // Update chat title
+  // const updateChatTitle = useCallback(
+  //   async (chatId: string, title: string): Promise<void> => {
+  //     try {
+  //       setError(null);
+  //       await apiUpdateTitle({ chatId, title });
 
-        // Update current chat if it's the one being updated
-        if (currentChat?.id === chatId) {
-          setCurrentChat((prev) => (prev ? { ...prev, title } : null));
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Không thể cập nhật tiêu đề";
-        setError(errorMessage);
-      }
-    },
-    [currentChat?.id, apiUpdateTitle]
-  );
+  //       // Update current chat if it's the one being updated
+  //       if (currentChat?.id === chatId) {
+  //         setCurrentChat((prev) => (prev ? { ...prev, title } : null));
+  //       }
+  //     } catch (error) {
+  //       const errorMessage =
+  //         error instanceof Error ? error.message : "Không thể cập nhật tiêu đề";
+  //       setError(errorMessage);
+  //     }
+  //   },
+  //   [currentChat?.id, apiUpdateTitle]
+  // );
 
-  // Delete chat
-  const deleteChat = useCallback(
-    async (chatId: string): Promise<void> => {
-      try {
-        setError(null);
-        await apiDeleteChat(chatId);
+  // // Delete chat
+  // const deleteChat = useCallback(
+  //   async (chatId: string): Promise<void> => {
+  //     try {
+  //       setError(null);
+  //       await apiDeleteChat(chatId);
 
-        // Clear current chat if it's the one being deleted
-        if (currentChat?.id === chatId) {
-          setCurrentChat(null);
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Không thể xóa cuộc trò chuyện";
-        setError(errorMessage);
-      }
-    },
-    [currentChat?.id, apiDeleteChat]
-  );
+  //       // Clear current chat if it's the one being deleted
+  //       if (currentChat?.id === chatId) {
+  //         setCurrentChat(null);
+  //       }
+  //     } catch (error) {
+  //       const errorMessage =
+  //         error instanceof Error
+  //           ? error.message
+  //           : "Không thể xóa cuộc trò chuyện";
+  //       setError(errorMessage);
+  //     }
+  //   },
+  //   [currentChat?.id, apiDeleteChat]
+  // );
 
-  // Clear current chat
-  const clearCurrentChat = useCallback(() => {
-    setCurrentChat(null);
-    setError(null);
-  }, []);
+  // // Clear current chat
+  // const clearCurrentChat = useCallback(() => {
+  //   setCurrentChat(null);
+  //   setError(null);
+  // }, []);
 
-  // Get chat by ID
-  const getChatById = useCallback(
-    (chatId: string): Chat | undefined => {
-      return chats.find((chat) => chat.id === chatId);
-    },
-    [chats]
-  );
+  // // Get chat by ID
+  // const getChatById = useCallback(
+  //   (chatId: string): Chat | undefined => {
+  //     return chats.find((chat) => chat.id === chatId);
+  //   },
+  //   [chats]
+  // );
 
-  // Refresh chats
-  const refreshChats = useCallback(async (): Promise<void> => {
-    try {
-      setError(null);
-      await refetchChats();
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải danh sách cuộc trò chuyện";
-      setError(errorMessage);
-    }
-  }, [refetchChats]);
+  // // Refresh chats
+  // const refreshChats = useCallback(async (): Promise<void> => {
+  //   try {
+  //     setError(null);
+  //     await refetchChats();
+  //   } catch (error) {
+  //     const errorMessage =
+  //       error instanceof Error
+  //         ? error.message
+  //         : "Không thể tải danh sách cuộc trò chuyện";
+  //     setError(errorMessage);
+  //   }
+  // }, [refetchChats]);
 
-  // Memoized context value
-  const contextValue = useMemo<ChatContextType>(
-    () => ({
-      // State
-      chats,
-      currentChat,
-      isLoading,
-      error,
+  // // Memoized context value
+  // const contextValue = useMemo<ChatContextType>(
+  //   () => ({
+  //     // State
+  //     chats,
+  //     currentChat,
+  //     isLoading,
+  //     error,
+  //     isInitialized,
 
-      // Actions
-      createNewChat,
-      selectChat,
-      addMessage,
-      updateChatTitle,
-      deleteChat,
-      clearCurrentChat,
+  //     // Actions
+  //     createNewChat,
+  //     selectChat,
+  //     addMessage,
+  //     updateChatTitle,
+  //     deleteChat,
+  //     clearCurrentChat,
 
-      // Utils
-      getChatById,
-      refreshChats,
-    }),
-    [
-      chats,
-      currentChat,
-      isLoading,
-      error,
-      createNewChat,
-      selectChat,
-      addMessage,
-      updateChatTitle,
-      deleteChat,
-      clearCurrentChat,
-      getChatById,
-      refreshChats,
-    ]
-  );
+  //     // Utils
+  //     getChatById,
+  //     refreshChats,
+  //   }),
+  //   [
+  //     chats,
+  //     currentChat,
+  //     isLoading,
+  //     error,
+  //     isInitialized,
+  //     createNewChat,
+  //     selectChat,
+  //     addMessage,
+  //     updateChatTitle,
+  //     deleteChat,
+  //     clearCurrentChat,
+  //     getChatById,
+  //     refreshChats,
+  //   ]
+  // );
+
+  // // Don't render children until initialization is complete
+  // if (!isInitialized) {
+  //   return null;
+  // }
 
   return (
-    <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>
+    <ChatContext.Provider
+      value={{
+        chats,
+        currentChat,
+        isLoadingChats,
+        error,
+        isCreatingChat,
+        isUpdatingTitle,
+        isDeletingChat,
+        isAddingMessage,
+        createNewChat,
+        selectChat,
+        addMessage,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
   );
 };
 

@@ -1,21 +1,12 @@
 "use client";
 
 import type React from "react";
+import { useState } from "react";
 import { motion } from "motion/react";
-import {
-  IconFile,
-  IconPhoto,
-  IconFileText,
-  IconVideo,
-  IconMenu2,
-} from "@tabler/icons-react";
+import { IconMenu2 } from "@tabler/icons-react";
 import UserAvatarMenu from "./user-avatar-menu";
 import ChatInput from "./chat-input";
-import { useState } from "react";
 import ChatContent from "./chat-content";
-import { useChat } from "@/provider/chat-provider";
-import type { Chat, ChatMessage } from "@/types/chat";
-import { useChatOperations } from "@/hooks/useChatOperations";
 import { toast } from "sonner";
 
 export interface AttachedFile {
@@ -29,39 +20,19 @@ export interface AttachedFile {
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   showMenuButton?: boolean;
-  currentChat?: Chat | null;
-  onAddMessage?: (
-    message: Omit<ChatMessage, "id" | "createdAt" | "updatedAt">
-  ) => Promise<void>;
+  currentChat?: { id: string; title: string } | null;
+  onAddMessage?: (message: any) => Promise<void>;
 }
-
-export const getFileIcon = (type: string) => {
-  if (type.startsWith("image/")) return <IconPhoto className="h-4 w-4" />;
-  if (type.startsWith("video/")) return <IconVideo className="h-4 w-4" />;
-  if (type.includes("pdf") || type.includes("document"))
-    return <IconFileText className="h-4 w-4" />;
-  return <IconFile className="h-4 w-4" />;
-};
 
 export default function ChatInterface({
   onToggleSidebar,
   showMenuButton = true,
+  currentChat,
 }: ChatInterfaceProps) {
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  const { currentChat } = useChat();
-  const { sendMessage } = useChatOperations();
-
-  // Convert chat messages to UI format
-  const messages =
-    currentChat?.messages?.map((msg) => ({
-      id: msg.id || `temp-${Date.now()}`,
-      role: msg.role,
-      content: msg.content,
-      experimental_attachments: msg.attachments,
-    })) || [];
+  const [messages, setMessages] = useState<any[]>([]);
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,27 +76,42 @@ export default function ChatInterface({
     setIsLoading(true);
 
     try {
-      // Use useChatOperations for sending messages
-      await sendMessage(
-        input.trim(),
-        attachedFiles.length > 0
-          ? attachedFiles.map((file) => ({
-              name: file.name,
-              contentType: file.type,
-              url: file.url,
-            }))
-          : undefined
-      );
+      // Add user message
+      const userMessage = {
+        id: Date.now().toString(),
+        role: "user" as const,
+        content: input.trim(),
+        experimental_attachments:
+          attachedFiles.length > 0
+            ? attachedFiles.map((file) => ({
+                name: file.name,
+                contentType: file.type,
+                url: file.url,
+              }))
+            : undefined,
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
 
       // Clear input and files
       setInput("");
       setAttachedFiles([]);
 
+      // Simulate AI response
+      setTimeout(() => {
+        const aiMessage = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant" as const,
+          content: `Tôi đã nhận được tin nhắn của bạn: "${input.trim()}". Đây là phản hồi mẫu từ AI assistant về vấn đề pháp lý bạn đang quan tâm.`,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setIsLoading(false);
+      }, 2000);
+
       toast.success("Tin nhắn đã được gửi");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Không thể gửi tin nhắn");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -146,8 +132,14 @@ export default function ChatInterface({
           </motion.button>
         )}
 
-        {/* Desktop spacer */}
-        <div className="hidden md:block" />
+        {/* Center - Chat title */}
+        <div className="hidden md:flex flex-1 justify-center">
+          {currentChat && (
+            <div className="text-neutral-300 font-medium">
+              {currentChat.title}
+            </div>
+          )}
+        </div>
 
         {/* Right side - User info */}
         <div className="flex items-center gap-3 text-neutral-400">
@@ -160,7 +152,11 @@ export default function ChatInterface({
       </div>
 
       {/* Messages */}
-      <ChatContent messages={[]} isLoading={isLoading} useSeedData={true} />
+      <ChatContent
+        messages={messages}
+        isLoading={isLoading}
+        useSeedData={messages.length === 0}
+      />
 
       {/* Input Area */}
       <ChatInput

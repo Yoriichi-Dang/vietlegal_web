@@ -1,81 +1,62 @@
 "use client";
 
-import {
-  IconCopy,
-  IconThumbUp,
-  IconThumbDown,
-  IconVolume,
-  IconRefresh,
-} from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
-import type { MessageActionProps } from "./types";
+import { IconCopy, IconRefresh, IconCheck } from "@tabler/icons-react";
+import { motion } from "motion/react";
+
+interface MessageActionsProps {
+  content: string;
+  messageId: string;
+  onCopy: (content: string, messageId: string) => void;
+  onRegenerate: () => void;
+  isRegenerating: boolean;
+  copiedId: string | null;
+}
 
 export default function MessageActions({
-  messageId,
   content,
-  index,
+  messageId,
   onCopy,
   onRegenerate,
   isRegenerating,
   copiedId,
-}: MessageActionProps) {
-  const handleCopy = () => {
-    if (onCopy) {
-      onCopy(content, messageId);
-    }
-  };
-
-  const handleRegenerate = () => {
-    if (onRegenerate) {
-      onRegenerate(index);
-    }
-  };
-
+}: MessageActionsProps) {
   return (
-    <div className="flex items-center gap-1 md:gap-2 mt-3 md:mt-4">
-      <button
-        className="p-2 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-        onClick={handleCopy}
-        title="Sao chép"
+    <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Copy button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => onCopy(content, messageId)}
+        className="p-2 text-neutral-400 hover:text-neutral-200 transition-colors rounded-lg hover:bg-neutral-700"
+        title="Copy message"
       >
-        <IconCopy
-          className={cn(
-            "h-3 w-3 md:h-4 md:w-4",
-            copiedId === messageId && "text-green-500"
-          )}
-        />
-      </button>
-      <button
-        className="p-2 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-        title="Thích"
-      >
-        <IconThumbUp className="h-3 w-3 md:h-4 md:w-4" />
-      </button>
-      <button
-        className="p-2 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-        title="Không thích"
-      >
-        <IconThumbDown className="h-3 w-3 md:h-4 md:w-4" />
-      </button>
-      <button
-        className="p-2 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors"
-        title="Đọc to"
-      >
-        <IconVolume className="h-3 w-3 md:h-4 md:w-4" />
-      </button>
-      <button
-        className="p-2 text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50"
-        onClick={handleRegenerate}
+        {copiedId === messageId ? (
+          <IconCheck className="h-4 w-4 text-green-400" />
+        ) : (
+          <IconCopy className="h-4 w-4" />
+        )}
+      </motion.button>
+
+      {/* Regenerate button */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={onRegenerate}
         disabled={isRegenerating}
-        title="Tạo lại phản hồi"
+        className="p-2 text-neutral-400 hover:text-neutral-200 transition-colors rounded-lg hover:bg-neutral-700 disabled:opacity-50"
+        title="Regenerate response"
       >
-        <IconRefresh
-          className={cn(
-            "h-3 w-3 md:h-4 md:w-4",
-            isRegenerating && "animate-spin text-blue-500"
-          )}
-        />
-      </button>
+        <motion.div
+          animate={{ rotate: isRegenerating ? 360 : 0 }}
+          transition={{
+            duration: 1,
+            repeat: isRegenerating ? Number.POSITIVE_INFINITY : 0,
+            ease: "linear",
+          }}
+        >
+          <IconRefresh className="h-4 w-4" />
+        </motion.div>
+      </motion.button>
     </div>
   );
 }

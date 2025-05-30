@@ -75,15 +75,17 @@ export interface UpdateConversationRequest {
 }
 export interface ChatAttachment {
   id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  file_path: string;
 }
 export type ChatMessage = {
   id?: string;
-  role: "user" | "assistant";
-  content: string;
+  senderType: "user" | "model" | "system";
+  messageType: "text" | "image" | "file";
+  model?: AIModel;
+  content?: string;
   createdAt?: Date;
   updatedAt?: Date;
   attachments?: ChatAttachment[];
@@ -92,9 +94,10 @@ export type ChatMessage = {
 export interface Chat {
   id: string;
   title: string;
+  isArchived: boolean;
   messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
   isActive?: boolean;
 }
 
@@ -110,26 +113,24 @@ export interface UpdateChatTitleRequest {
 export interface AddMessageRequest {
   chatId: string;
   message: Omit<ChatMessage, "id" | "createdAt" | "updatedAt">;
-  isFirstMessage: boolean;
-  attachments?: ChatAttachment[];
 }
 
 export interface ChatContextType {
   // State
   chats: Chat[];
   currentChat: Chat | null;
-  isLoading: boolean;
+  isLoadingChats: boolean;
   error: string | null;
+  isCreatingChat: boolean;
+  isUpdatingTitle: boolean;
+  isDeletingChat: boolean;
+  isAddingMessage: boolean;
 
   // Actions
   createNewChat: (data?: CreateChatRequest) => Promise<Chat | null>;
   selectChat: (chatId: string) => Promise<void>;
-  addMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => Promise<void>;
-  updateChatTitle: (chatId: string, title: string) => Promise<void>;
-  deleteChat: (chatId: string) => Promise<void>;
-  clearCurrentChat: () => void;
-
-  // Utils
-  getChatById: (chatId: string) => Chat | undefined;
-  refreshChats: () => Promise<void>;
+  addMessage: (
+    chatId: string,
+    message: Omit<ChatMessage, "id" | "createdAt" | "updatedAt">
+  ) => Promise<void>;
 }

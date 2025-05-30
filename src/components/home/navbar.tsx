@@ -2,19 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Scale, Menu, LogIn, User } from "lucide-react";
+import { Scale, Menu, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useState } from "react";
 import type React from "react";
+import { useSession } from "next-auth/react";
+import { IconMessageChatbot } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { Spinner } from "../ui/spinner";
 
 export default function Navbar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const toggleLogin = () => {
-    setIsLoggedIn(!isLoggedIn);
-  };
-
+  const { data: session, status } = useSession();
+  const router = useRouter();
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -35,20 +34,27 @@ export default function Navbar() {
       </div>
 
       <div className="hidden md:flex items-center space-x-4">
-        {isLoggedIn ? (
+        {session ? (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="flex items-center space-x-3"
           >
-            <span className="text-white">Chào mừng, Luật sư</span>
-            <Avatar className="cursor-pointer" onClick={toggleLogin}>
+            <span className="text-white">Hello, {session.user?.name}</span>
+            <Avatar
+              className="cursor-pointer"
+              onClick={() => {
+                router.push("/new");
+              }}
+            >
               <AvatarImage src="/placeholder.svg?height=40&width=40" />
               <AvatarFallback className="bg-blue-500">
-                <User className="h-5 w-5" />
+                <IconMessageChatbot className="h-5 w-5" />
               </AvatarFallback>
             </Avatar>
           </motion.div>
+        ) : status === "loading" ? (
+          <Spinner size="md" />
         ) : (
           <Button
             variant="ghost"

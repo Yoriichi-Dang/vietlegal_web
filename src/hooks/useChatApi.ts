@@ -29,6 +29,9 @@ export const useChatApi = () => {
     },
     enabled: isReady,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
   });
 
   // Fetch specific chat
@@ -36,7 +39,7 @@ export const useChatApi = () => {
     if (!isReady || !chatId) return null;
 
     try {
-      const response = await axiosAuth.get(CHAT_API.getChat(chatId));
+      const response = await axiosAuth.get<Chat>(CHAT_API.getChat(chatId));
       return response.data;
     } catch (error) {
       console.error("Error fetching chat:", error);
@@ -136,12 +139,10 @@ export const useChatApi = () => {
     mutationFn: async ({
       chatId,
       message,
-      isFirstMessage,
     }: AddMessageRequest): Promise<ChatMessage> => {
       if (!isReady) throw new Error("Not authenticated");
       const response = await axiosAuth.post(CHAT_API.addMessage(chatId), {
         message: message,
-        isFirstMessage: isFirstMessage,
       });
       return response.data;
     },
@@ -176,7 +177,7 @@ export const useChatApi = () => {
   return {
     // Data
     chats,
-    isLoadingChats,
+    isLoadingChats: isLoadingChats || !isReady || !chats.length,
     chatsError,
 
     // Functions

@@ -3,12 +3,10 @@
 import { AnimatePresence } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useChatOperations } from "@/hooks/useChatOperations";
 import BeautifulCenterText from "./beauty-text";
 import ChatMessage from "./message/chat-message";
 import LoadingMessage from "./message/loading-message";
 import type { MessageAttachment } from "./message/types";
-import { chatSeedData } from "@/data/chat-seed-data";
 
 interface MessageProps {
   id: string;
@@ -23,6 +21,21 @@ type Props = {
   useSeedData?: boolean;
 };
 
+// Sample seed data for demonstration
+const chatSeedData: MessageProps[] = [
+  {
+    id: "1",
+    role: "user",
+    content: "Tôi muốn tìm hiểu về quy định thuế thu nhập cá nhân mới nhất.",
+  },
+  {
+    id: "2",
+    role: "assistant",
+    content:
+      "Tôi sẽ giúp bạn tìm hiểu về quy định thuế thu nhập cá nhân mới nhất. Theo Luật Thuế thu nhập cá nhân được sửa đổi, bổ sung năm 2020, có một số điểm quan trọng sau:\n\n**1. Mức giảm trừ gia cảnh:**\n- Bản thân: 11 triệu đồng/tháng\n- Người phụ thuộc: 4,4 triệu đồng/tháng/người\n\n**2. Biểu thuế lũy tiến từng phần:**\n- Đến 5 triệu: 5%\n- Trên 5 triệu đến 10 triệu: 10%\n- Trên 10 triệu đến 18 triệu: 15%\n- Trên 18 triệu đến 32 triệu: 20%\n- Trên 32 triệu đến 52 triệu: 25%\n- Trên 52 triệu đến 80 triệu: 30%\n- Trên 80 triệu: 35%\n\nBạn có muốn tôi giải thích chi tiết về phần nào không?",
+  },
+];
+
 const ChatContent = ({
   messages = [],
   isLoading = false,
@@ -32,9 +45,8 @@ const ChatContent = ({
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
     null
   );
-  const { regenerateResponse } = useChatOperations();
 
-  // Sử dụng seed data nếu được yêu cầu và không có messages
+  // Use seed data if requested and no messages
   const displayMessages =
     useSeedData && messages.length === 0 ? chatSeedData : messages;
 
@@ -60,13 +72,13 @@ const ChatContent = ({
       .findIndex((msg) => msg.role === "user");
 
     if (previousUserMessageIndex !== -1) {
-      const userMessageIndex = messageIndex - previousUserMessageIndex - 1;
-
       try {
         setRegeneratingIndex(messageIndex);
-        await regenerateResponse(userMessageIndex);
+        // Simulate regeneration
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         toast.success("Đã tạo lại phản hồi");
-      } catch (error) {
+      } catch (error: any) {
+        console.error("Error regenerating response:", error);
         toast.error("Không thể tạo lại phản hồi");
       } finally {
         setRegeneratingIndex(null);
@@ -74,7 +86,7 @@ const ChatContent = ({
     }
   };
 
-  // Hiển thị text đẹp khi chưa có tin nhắn
+  // Show beautiful center text when no messages
   if (displayMessages.length === 0 && !isLoading) {
     return <BeautifulCenterText />;
   }

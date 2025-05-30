@@ -61,14 +61,14 @@ export default function Hero() {
               <MessageCircle className="mr-2 h-5 w-5" />
               Tư Vấn Ngay
             </Button>
-            <Button
+            {/* <Button
               size="lg"
               variant="outline"
               className="text-white border-blue-500 hover:bg-blue-500/20 cursor-pointer"
             >
               <MessageCircle className="mr-2 h-5 w-5" />
               Đặt Câu Hỏi
-            </Button>
+            </Button> */}
           </motion.div>
 
           {/* Quick stats */}
