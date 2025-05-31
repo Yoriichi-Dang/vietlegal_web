@@ -15,11 +15,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-
-interface Chat {
-  id: string;
-  title: string;
-}
+import { Chat } from "@/types/chat";
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -313,6 +309,7 @@ const ChatList = memo(
   }) => {
     const handleSelectChat = useCallback(
       (chatId: string) => {
+        window.history.replaceState({}, "", `/c/${chatId}`);
         onSelectChat(chatId);
       },
       [onSelectChat]

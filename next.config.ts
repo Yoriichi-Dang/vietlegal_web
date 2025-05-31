@@ -7,7 +7,10 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
   },
   images: {
-    domains: ["res.cloudinary.com"],
+    domains: [
+      "res.cloudinary.com",
+      "legalwise-vietlegal.s3.us-east-1.amazonaws.com",
+    ],
     remotePatterns: [
       {
         hostname: "registry.npmmirror.com",

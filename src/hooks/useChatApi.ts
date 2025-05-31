@@ -39,6 +39,15 @@ export const useChatApi = () => {
     if (!isReady || !chatId) return null;
 
     try {
+      // Kiểm tra trong cache trước
+      const cachedChats = queryClient.getQueryData<Chat[]>(["chats"]);
+      const cachedChat = cachedChats?.find((chat: Chat) => chat.id === chatId);
+
+      if (cachedChat) {
+        return cachedChat;
+      }
+
+      // Nếu không có trong cache thì fetch từ API
       const response = await axiosAuth.get<Chat>(CHAT_API.getChat(chatId));
       return response.data;
     } catch (error) {
@@ -141,9 +150,23 @@ export const useChatApi = () => {
       message,
     }: AddMessageRequest): Promise<ChatMessage> => {
       if (!isReady) throw new Error("Not authenticated");
-      const response = await axiosAuth.post(CHAT_API.addMessage(chatId), {
-        message: message,
-      });
+      const body: any = {
+        content: message.content,
+        sender_type: message.sender_type,
+        message_type: message.message_type,
+      };
+      if (message.attachments) {
+        body.attachments = message.attachments.map((attachment) => ({
+          file_name: attachment.file_name,
+          file_type: attachment.file_type,
+          file_size: attachment.file_size,
+          file_path: attachment.file_url,
+        }));
+      }
+      if (message.model_id) {
+        body.model_id = message.model_id;
+      }
+      const response = await axiosAuth.post(CHAT_API.addMessage(chatId), body);
       return response.data;
     },
     onSuccess: (newMessage, { chatId }) => {
@@ -155,7 +178,7 @@ export const useChatApi = () => {
 
           return {
             ...oldChat,
-            messages: [...oldChat.messages, newMessage],
+            messages: [...(oldChat.messages || []), newMessage],
             updatedAt: new Date(),
           };
         }

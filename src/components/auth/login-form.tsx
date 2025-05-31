@@ -49,7 +49,6 @@ export default function LoginForm() {
     try {
       // Validate entire form
       const validatedData = loginSchema.parse(formData);
-      console.log("Login data:", validatedData);
       const result = await signIn("credentials", {
         email: validatedData.email,
         password: validatedData.password,

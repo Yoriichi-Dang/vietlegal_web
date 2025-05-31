@@ -129,10 +129,12 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
                 <div className="p-4 border-b border-neutral-700/50 bg-gradient-to-r from-neutral-800/50 to-neutral-700/50">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full overflow-hidden">
-                      <img
+                      <Image
                         src={session?.user?.image || "/placeholder.svg"}
                         alt="User avatar"
                         className="w-full h-full object-cover"
+                        width={48}
+                        height={48}
                       />
                     </div>
                     <div>

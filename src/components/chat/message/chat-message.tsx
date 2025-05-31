@@ -1,18 +1,18 @@
 "use client";
 import UserMessage from "./user-message";
 import AssistantMessage from "./assistant-message";
-import type { MessageAttachment } from "./types";
+import { Attachment } from "@ai-sdk/ui-utils";
 
 interface ChatMessageProps {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  experimental_attachments?: MessageAttachment[];
+  experimental_attachments?: Attachment[];
   index: number;
   onCopy: (content: string, messageId: string) => void;
+  copiedId: string | null;
   onRegenerate: (messageIndex: number) => void;
   isRegenerating: boolean;
-  copiedId: string | null;
 }
 
 export default function ChatMessage({
@@ -22,9 +22,9 @@ export default function ChatMessage({
   experimental_attachments,
   index,
   onCopy,
+  copiedId,
   onRegenerate,
   isRegenerating,
-  copiedId,
 }: ChatMessageProps) {
   if (role === "user") {
     return (

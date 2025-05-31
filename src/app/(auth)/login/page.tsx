@@ -1,5 +1,5 @@
 "use client";
-import LoginForm from "@/components/auth/login-form";
+import LoginForm from "@/components/auth/lold-ogin-form";
 import { LoginFormData } from "@/schemas/login";
 import { useState } from "react";
 import { signIn } from "next-auth/react";

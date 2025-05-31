@@ -1,9 +1,9 @@
 "use client";
-import ChatContent from "@/components/chat/old/chat-content";
+import ChatbotApp from "@/components/chat/chat-app";
 
 // Main component
 const ConversationPage = () => {
-  return <ChatContent />;
+  return <ChatbotApp />;
 };
 
 export default ConversationPage;

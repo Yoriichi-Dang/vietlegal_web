@@ -1,89 +1,75 @@
 "use client";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import ChatInterface from "@/components/chat/chat-interface";
 import ChatSidebar from "@/components/chat/chat-sidebar";
 import { toast } from "sonner";
-
-interface Chat {
-  id: string;
-  title: string;
-}
+import { useChat } from "@/provider/chat-provider";
+import { Spinner } from "../ui/spinner";
+import { usePathname } from "next/navigation";
 
 // Mock data for demonstration
-const mockChats: Chat[] = [
-  { id: "1", title: "Legal Contract Review" },
-  { id: "2", title: "Tax Law Questions" },
-  { id: "3", title: "Insurance Claims" },
-];
 
 export default function ChatbotApp() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
-  const [currentChat, setCurrentChat] = useState<Chat | null>(null);
-  const [chats, setChats] = useState<Chat[]>(mockChats);
-  const [newlyCreatedChatId, setNewlyCreatedChatId] = useState<string | null>(
-    null
-  );
-  const [isCreatingChat, setIsCreatingChat] = useState(false);
 
+  const {
+    chats,
+    currentChat,
+    createNewChat,
+    isLoadingChats,
+    isCreatingChat,
+    deleteChat,
+    updateChatTitle,
+    selectChat,
+  } = useChat();
+  const pathname = usePathname();
+  const chatId = pathname.includes("c") ? pathname.split("/").pop() : null;
+  useEffect(() => {
+    if (chatId && !isLoadingChats) {
+      selectChat(chatId);
+    }
+  }, [chatId, selectChat, isLoadingChats]);
   // Handle new chat creation with animation
   const handleNewChat = useCallback(async () => {
     if (isCreatingChat) return;
 
     try {
-      const newChat: Chat = {
-        id: Date.now().toString(),
-        title: "New Chat",
-      };
-
       // Start creating animation
-      setIsCreatingChat(true);
-      setNewlyCreatedChatId(newChat.id);
-
-      // Add new chat to the beginning of the list
-      setChats((prev) => [newChat, ...prev]);
-      setCurrentChat(newChat);
-
-      // Close mobile sidebar if on mobile
+      const newChat = await createNewChat();
+      if (newChat) {
+        window.history.replaceState({}, "", `/c/${newChat.id}`);
+        toast.success("Đã tạo cuộc trò chuyện mới");
+      } else {
+        toast.error("Không thể tạo cuộc trò chuyện mới");
+      }
       if (window.innerWidth < 768) {
         setMobileSidebarOpen(false);
       }
-
-      toast.success("Đã tạo cuộc trò chuyện mới");
-
       // Clear animation state after animation completes
-      setTimeout(() => {
-        setNewlyCreatedChatId(null);
-        setIsCreatingChat(false);
-      }, 600);
     } catch (error: any) {
       console.log(error);
       toast.error("Không thể tạo cuộc trò chuyện mới");
-      setNewlyCreatedChatId(null);
-      setIsCreatingChat(false);
     }
-  }, [isCreatingChat]);
+  }, [isCreatingChat, createNewChat]);
 
   // Handle chat selection
   const handleSelectChat = useCallback(
-    (chatId: string) => {
-      const chat = chats.find((c) => c.id === chatId);
-      if (chat) {
-        setCurrentChat(chat);
-        setMobileSidebarOpen(false);
-      }
+    async (chatId: string) => {
+      await selectChat(chatId);
+      setMobileSidebarOpen(false);
     },
-    [chats]
+    [selectChat]
   );
 
   // Handle chat deletion
   const handleDeleteChat = useCallback(
-    (chatId: string) => {
+    (id: string) => {
       try {
-        setChats((prev) => prev.filter((c) => c.id !== chatId));
-        if (currentChat?.id === chatId) {
-          setCurrentChat(null);
+        deleteChat(id);
+        if (currentChat?.id === id) {
+          window.history.replaceState({}, "", "/new");
         }
         toast.success("Đã xóa cuộc trò chuyện");
       } catch (error: any) {
@@ -91,26 +77,21 @@ export default function ChatbotApp() {
         toast.error("Không thể xóa cuộc trò chuyện");
       }
     },
-    [currentChat]
+    [deleteChat, currentChat]
   );
 
   // Handle chat title update
   const handleUpdateChatTitle = useCallback(
     (chatId: string, title: string) => {
       try {
-        setChats((prev) =>
-          prev.map((chat) => (chat.id === chatId ? { ...chat, title } : chat))
-        );
-        if (currentChat?.id === chatId) {
-          setCurrentChat({ ...currentChat, title });
-        }
+        updateChatTitle(chatId, title);
         toast.success("Đã cập nhật tiêu đề");
       } catch (error: any) {
         console.log(error);
         toast.error("Không thể cập nhật tiêu đề");
       }
     },
-    [currentChat]
+    [updateChatTitle]
   );
 
   // Memoized sidebar props to prevent unnecessary re-renders
@@ -123,7 +104,7 @@ export default function ChatbotApp() {
       onDeleteChat: handleDeleteChat,
       onUpdateChatTitle: handleUpdateChatTitle,
       isCreatingChat,
-      newlyCreatedChatId,
+      newlyCreatedChatId: currentChat?.id || null,
     }),
     [
       chats,
@@ -133,9 +114,15 @@ export default function ChatbotApp() {
       handleDeleteChat,
       handleUpdateChatTitle,
       isCreatingChat,
-      newlyCreatedChatId,
     ]
   );
+  if (isLoadingChats) {
+    return (
+      <div className="flex h-screen w-full bg-neutral-900 overflow-hidden items-center justify-center">
+        <Spinner size={"xl"} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full bg-neutral-900 overflow-hidden">
@@ -143,7 +130,7 @@ export default function ChatbotApp() {
       <motion.div
         className="hidden md:flex bg-neutral-900 border-r border-neutral-800/50 shrink-0"
         animate={{
-          width: desktopSidebarOpen ? "280px" : "60px",
+          width: desktopSidebarOpen ? "280px" : "70px",
         }}
         transition={{
           duration: 0.3,
@@ -198,7 +185,6 @@ export default function ChatbotApp() {
         <ChatInterface
           onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           showMenuButton={true}
-          currentChat={currentChat}
         />
       </div>
     </div>

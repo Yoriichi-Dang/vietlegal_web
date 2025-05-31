@@ -1,123 +1,224 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { IconMenu2 } from "@tabler/icons-react";
 import UserAvatarMenu from "./user-avatar-menu";
 import ChatInput from "./chat-input";
 import ChatContent from "./chat-content";
 import { toast } from "sonner";
-
-export interface AttachedFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-}
-
+import type { ChatAttachment, ChatMessage } from "@/types/chat";
+import { useChat as useChatProvider } from "@/provider/chat-provider";
+import { useChat as useChatAI } from "@ai-sdk/react";
+import { MODEL } from "@/constants/model";
+import { Attachment } from "ai";
+import { v4 as uuidv4 } from "uuid";
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   showMenuButton?: boolean;
-  currentChat?: { id: string; title: string } | null;
-  onAddMessage?: (message: any) => Promise<void>;
 }
+
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 10MB
 
 export default function ChatInterface({
   onToggleSidebar,
   showMenuButton = true,
-  currentChat,
 }: ChatInterfaceProps) {
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<ChatAttachment[]>([]);
+  const { addMessage, currentChat, isAddingMessage, updateChatTitle } =
+    useChatProvider();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { messages, status, input, handleInputChange, handleSubmit } =
+    useChatAI({
+      initialMessages:
+        currentChat?.messages?.map((message) => {
+          const attachments: Attachment[] | undefined =
+            message.attachments?.map((attachment: any) => {
+              return {
+                name: attachment.file_name,
+                contentType: attachment.file_type,
+                url: attachment.file_path as string,
+              };
+            });
+          return {
+            id: message.id!,
+            role: message.sender_type === "user" ? "user" : "assistant",
+            content: message.content || "",
+            experimental_attachments: attachments,
+          };
+        }) || [],
+      onFinish: async (message) => {
+        if (currentChat?.id) {
+          await addMessage(currentChat?.id, {
+            sender_type: "model",
+            message_type: "text",
+            model_id: MODEL.id.toString(),
+            content: message.content,
+          });
+        }
+      },
+    });
 
   // Handle file upload
+  // Sửa handleFileUpload để lưu cả File object
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newFile: AttachedFile = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: e.target?.result as string,
-        };
-        setAttachedFiles((prev) => [...prev, newFile]);
+    setIsUploading(true);
+    Array.from(files).forEach(async (file) => {
+      const { fileUrl } = await uploadFile(file);
+      const newFile: ChatAttachment = {
+        id: uuidv4(),
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        file_url: fileUrl,
       };
-      reader.readAsDataURL(file);
+      setAttachedFiles((prev) => [...prev, newFile]);
+      setIsUploading(false);
     });
 
-    // Reset input
     event.target.value = "";
   };
+  const deleteFile = async (fileKey: string) => {
+    try {
+      const response = await fetch("/api/delete-file", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileKey }),
+      });
 
-  // Remove file
-  const removeFile = (fileId: string) => {
-    setAttachedFiles((prev) => prev.filter((file) => file.id !== fileId));
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Delete error:", error);
+      throw error;
+    }
   };
+  // Remove file
+  const removeFile = async (fileId: string) => {
+    const fileKey = attachedFiles
+      .find((file) => file.id === fileId)
+      ?.file_url?.split("/")
+      .pop();
+    if (fileKey) {
+      setAttachedFiles((prev) => {
+        const filtered = prev.filter((file) => file.id !== fileId);
+        return filtered;
+      });
+      await deleteFile(fileKey);
+      toast.success("File deleted successfully");
+    }
+  };
+  const computeSHA256 = async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return hashHex;
+  };
+  const uploadFile = async (file: File) => {
+    const response = await fetch("/api/signed-url", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileType: file.type,
+        fileSize: file.size,
+        checksum: await computeSHA256(file),
+        fileName: file.name,
+      }),
+    });
+    const data = await response.json();
 
-  // Handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
+    if (!response.ok) {
+      return { failure: data.failure };
+    }
+    await fetch(data.success.url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+    const fileUrl = data.success.url.split("?")[0];
+    return { fileUrl, id: data.success.id };
+  };
+  // Handle form submit
+  // Helper function to convert ChatAttachment to Attachment
+  const convertToAIAttachments = (
+    chatAttachments: ChatAttachment[]
+  ): Attachment[] => {
+    return chatAttachments
+      .filter((file) => file.file_url) // Only include files with valid URLs
+      .map((file) => ({
+        name: file.file_name,
+        contentType: file.file_type,
+        url: file.file_url!,
+      }));
   };
 
   // Handle form submit
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!input.trim() && attachedFiles.length === 0) return;
-
-    setIsLoading(true);
+    if (input.trim() === "") {
+      toast.error("Vui lòng nhập tin nhắn ");
+      return;
+    }
 
     try {
-      // Add user message
-      const userMessage = {
-        id: Date.now().toString(),
-        role: "user" as const,
+      // Add user message to database first
+      const userMessage: ChatMessage = {
+        sender_type: "user",
+        message_type: "text",
         content: input.trim(),
-        experimental_attachments:
-          attachedFiles.length > 0
-            ? attachedFiles.map((file) => ({
-                name: file.name,
-                contentType: file.type,
-                url: file.url,
-              }))
-            : undefined,
+        attachments: attachedFiles,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      if (!currentChat?.messages || currentChat?.messages.length === 0) {
+        await updateChatTitle(currentChat?.id || "", input.trim().slice(0, 20));
+      }
 
-      // Clear input and files
-      setInput("");
+      // Convert ChatAttachment[] to Attachment[] for AI SDK
+      const aiAttachments = convertToAIAttachments(attachedFiles);
+
+      // Create options object
+      const submitOptions: any = {};
+
+      // Only add attachments if there are any
+      if (aiAttachments.length > 0) {
+        submitOptions.experimental_attachments = aiAttachments;
+      }
+
+      // Submit with options
+      handleSubmit(e, submitOptions);
+
+      await addMessage(currentChat?.id || "", userMessage);
       setAttachedFiles([]);
-
-      // Simulate AI response
-      setTimeout(() => {
-        const aiMessage = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant" as const,
-          content: `Tôi đã nhận được tin nhắn của bạn: "${input.trim()}". Đây là phản hồi mẫu từ AI assistant về vấn đề pháp lý bạn đang quan tâm.`,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsLoading(false);
-      }, 2000);
-
-      toast.success("Tin nhắn đã được gửi");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Không thể gửi tin nhắn");
-      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-neutral-900 w-full">
+    <div
+      ref={chatContainerRef}
+      className="flex flex-col h-full bg-neutral-900 w-full"
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 md:p-6 pb-4">
         {/* Left side - Menu button (only on mobile) */}
@@ -143,19 +244,15 @@ export default function ChatInterface({
 
         {/* Right side - User info */}
         <div className="flex items-center gap-3 text-neutral-400">
-          <div className="flex items-center gap-2 bg-neutral-800 rounded-full px-3 py-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <span className="text-sm">6/75</span>
-          </div>
           <UserAvatarMenu />
         </div>
       </div>
 
       {/* Messages */}
       <ChatContent
-        messages={messages}
-        isLoading={isLoading}
-        useSeedData={messages.length === 0}
+        messages={messages || []}
+        isLoading={status === "submitted"}
+        isStreaming={status === "streaming"}
       />
 
       {/* Input Area */}
@@ -164,7 +261,7 @@ export default function ChatInterface({
         attachedFiles={attachedFiles}
         handleFileUpload={handleFileUpload}
         handleInputChange={handleInputChange}
-        isLoading={isLoading}
+        isLoading={status === "submitted" || isAddingMessage || isUploading}
         input={input}
         removeFile={removeFile}
       />

@@ -12,14 +12,8 @@ import {
   IconVideo,
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
-
-export interface AttachedFile {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url: string;
-}
+import { ChatAttachment } from "@/types/chat";
+import { MAX_FILE_SIZE } from "./chat-interface";
 
 const formatFileSize = (bytes: number) => {
   if (bytes === 0) return "0 Bytes";
@@ -32,6 +26,7 @@ const formatFileSize = (bytes: number) => {
 };
 
 const getFileIcon = (type: string) => {
+  if (!type) return null;
   if (type.startsWith("image/")) return <IconPhoto className="h-4 w-4" />;
   if (type.startsWith("video/")) return <IconVideo className="h-4 w-4" />;
   if (type.includes("pdf") || type.includes("document"))
@@ -41,7 +36,7 @@ const getFileIcon = (type: string) => {
 
 type Props = {
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  attachedFiles: AttachedFile[];
+  attachedFiles: ChatAttachment[];
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   isLoading: boolean;
@@ -78,21 +73,25 @@ const ChatInput = ({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center gap-2 bg-gradient-to-r from-neutral-800 to-neutral-700 rounded-xl px-3 md:px-4 py-2 text-sm border border-neutral-600 shadow-lg"
+                  className="flex items-center gap-2 bg-gradient-to-r from-neutral-800 to-neutral-700 rounded-xl px-3 md:px-4 py-2 text-sm border border-neutral-600 shadow-lg relative"
                 >
-                  <div className="text-blue-400">{getFileIcon(file.type)}</div>
+                  <div className="text-blue-400">
+                    {getFileIcon(file.file_type)}
+                  </div>
                   <span className="text-neutral-200 max-w-[100px] md:max-w-[150px] truncate font-medium">
-                    {file.name}
+                    {file.file_name}
                   </span>
                   <span className="text-neutral-400 text-xs">
-                    ({formatFileSize(file.size)})
+                    ({formatFileSize(file.file_size)})
                   </span>
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="text-neutral-400 hover:text-red-400 transition-colors ml-1 hover:scale-110 transform"
+                  <div
+                    onClick={() => {
+                      removeFile(file.id!);
+                    }}
+                    className="text-neutral-400 hover:text-red-400 transition-colors ml-1 hover:scale-110 transform cursor-pointer z-20 relative p-2 -m-1"
                   >
                     <IconX className="h-4 w-4" />
-                  </button>
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
@@ -115,6 +114,7 @@ const ChatInput = ({
                   onChange={handleFileUpload}
                   className="hidden"
                   accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                  max={MAX_FILE_SIZE}
                 />
                 <motion.button
                   type="button"
@@ -222,11 +222,11 @@ const ChatInput = ({
               <div className="flex gap-2 items-center bg-neutral-800/90 backdrop-blur-sm rounded-xl px-4 py-2 border border-neutral-700/50">
                 <span className="text-neutral-400 text-sm">Try:</span>
                 <button className="text-blue-400 text-sm hover:text-blue-300 transition-colors">
-                  "Help me with..."
+                  &quot;Help me with...&quot;
                 </button>
                 <span className="text-neutral-600">•</span>
                 <button className="text-purple-400 text-sm hover:text-purple-300 transition-colors">
-                  "Explain..."
+                  &quot;Explain...&quot;
                 </button>
               </div>
             </motion.div>

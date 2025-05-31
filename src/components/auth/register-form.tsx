@@ -72,7 +72,6 @@ export default function RegisterForm() {
     try {
       // Validate entire form
       const validatedData = registerSchema.parse(formData);
-      console.log("Register data:", validatedData);
       const res = await axios.post(authApiUrl.register, {
         username: validatedData.name,
         email: validatedData.email,
