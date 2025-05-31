@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { signOut, useSession } from "next-auth/react";
 import useAxiosAuth from "@/hooks/useAxiosAuth";
 import { profileApiUrl } from "@/utils/config";
+import { uploadAvatar } from "@/utils/upload";
 
 interface UserAvatarMenuProps {
   className?: string;
@@ -190,10 +191,7 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
       {/* Profile Dialog */}
       <AnimatePresence>
         {activeDialog === "profile" && (
-          <ProfileDialog
-            onClose={() => setActiveDialog(null)}
-            onUpdate={() => {}}
-          />
+          <ProfileDialog onClose={() => setActiveDialog(null)} />
         )}
       </AnimatePresence>
 
@@ -239,16 +237,11 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 // Enhanced Profile Dialog Component
-function ProfileDialog({
-  onClose,
-  onUpdate,
-}: {
-  onClose: () => void;
-  onUpdate: (field: string, value: string) => void;
-}) {
-  const { data: session } = useSession();
+function ProfileDialog({ onClose }: { onClose: () => void }) {
+  const { data: session, update } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const { axiosAuth, isReady } = useAxiosAuth();
   const [avatar, setAvatar] = useState<string | null>(
     session?.user?.image || null
   );
@@ -264,27 +257,26 @@ function ProfileDialog({
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Update all fields
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined) {
-          onUpdate(key, value);
-        }
-      });
-
-      if (avatar) {
-        onUpdate("avatar", avatar);
-      }
-
-      toast.success("Cập nhật thông tin thành công!");
-      onClose();
-    } catch (error: any) {
-      console.log(error);
-      toast.error("Có lỗi xảy ra khi cập nhật thông tin");
-    } finally {
+    data.avatarUrl = avatar || "";
+    if (isReady) {
+      await axiosAuth
+        .put(profileApiUrl.updateProfile, data)
+        .then(() => {
+          update({
+            user: {
+              name: data.name,
+              image: data.avatarUrl,
+            },
+          });
+          toast.success("Cập nhật thông tin thành công!");
+        })
+        .catch((error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Có lỗi xảy ra khi cập nhật thông tin"
+          );
+        });
       setIsSubmitting(false);
     }
   };
@@ -317,15 +309,14 @@ function ProfileDialog({
     setIsUploading(true);
 
     try {
-      // Simulate upload to Cloudinary
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // In real implementation, replace with actual upload
-      // const cloudinaryUrl = await uploadAvatar(file)
-      const cloudinaryUrl = localImageUrl; // Temporary for demo
-
-      setAvatar(cloudinaryUrl);
-      toast.success("Upload ảnh đại diện thành công!");
+      const cloudinaryUrl = await uploadAvatar(file);
+      if (cloudinaryUrl) {
+        URL.revokeObjectURL(localImageUrl);
+        setAvatar(cloudinaryUrl);
+        toast.success("Upload ảnh đại diện thành công!");
+      } else {
+        toast.error("Không thể upload ảnh đại diện");
+      }
     } catch (error: any) {
       console.log(error);
       toast.error("Có lỗi xảy ra khi upload ảnh đại diện");

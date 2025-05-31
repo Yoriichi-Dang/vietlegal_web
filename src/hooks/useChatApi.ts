@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useRef } from "react";
 import useAxiosAuth from "./useAxiosAuth";
 import type {
   Chat,
@@ -14,10 +15,20 @@ export const useChatApi = () => {
   const { axiosAuth, isReady } = useAxiosAuth();
   const queryClient = useQueryClient();
 
+  // Track if we've ever been ready to prevent refetch on isReady changes
+  const hasBeenReadyRef = useRef(false);
+
+  // Once ready, stay ready
+  if (isReady && !hasBeenReadyRef.current) {
+    hasBeenReadyRef.current = true;
+  }
+
   // Fetch all chats
   const {
     data: chats = [],
+    isFetched: isFetchedChats,
     isLoading: isLoadingChats,
+    isError: isErrorChats,
     error: chatsError,
     refetch: refetchChats,
   } = useQuery({
@@ -27,7 +38,8 @@ export const useChatApi = () => {
       const response = await axiosAuth.get(CHAT_API.getChatIncludeMessages);
       return response.data;
     },
-    enabled: isReady,
+    // Chỉ enable khi lần đầu ready, không refetch khi isReady thay đổi
+    enabled: hasBeenReadyRef.current,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -200,7 +212,10 @@ export const useChatApi = () => {
   return {
     // Data
     chats,
-    isLoadingChats: isLoadingChats || !isReady || !chats.length,
+    // Chỉ trả về isLoadingChats từ useQuery, không kết hợp với isReady
+    isFetchedChats,
+    isLoadingChats,
+    isErrorChats,
     chatsError,
 
     // Functions
@@ -218,5 +233,9 @@ export const useChatApi = () => {
     isUpdatingTitle: updateTitleMutation.isPending,
     isDeletingChat: deleteChatMutation.isPending,
     isAddingMessage: addMessageMutation.isPending,
+
+    // Thêm isReady để component có thể kiểm tra nếu cần
+    isReady,
+    hasBeenReady: hasBeenReadyRef.current,
   };
 };

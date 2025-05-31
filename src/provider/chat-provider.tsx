@@ -22,7 +22,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   const {
     chats,
+    isFetchedChats,
     isLoadingChats,
+    isErrorChats,
     fetchChat,
     createChat: apiCreateChat,
     addMessage: apiAddMessage,
@@ -32,6 +34,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isUpdatingTitle,
     isDeletingChat,
     isAddingMessage,
+    hasBeenReady,
   } = useChatApi();
 
   const createNewChat = useCallback(
@@ -140,7 +143,9 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       value={{
         chats,
         currentChat,
+        isFetchedChats,
         isLoadingChats,
+        isErrorChats,
         error,
         isCreatingChat,
         isUpdatingTitle,
@@ -151,6 +156,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         addMessage,
         updateChatTitle,
         deleteChat,
+        hasBeenReady,
       }}
     >
       {children}

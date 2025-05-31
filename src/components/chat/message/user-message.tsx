@@ -45,15 +45,11 @@ export default function UserMessage({
                   <div key={index} className="relative">
                     <div className="relative rounded-lg overflow-hidden bg-neutral-900">
                       <Image
-                        src={
-                          attachment.url ||
-                          "/placeholder.svg?height=200&width=300&query=image"
-                        }
+                        src={attachment.url}
                         alt={attachment.name || "Image attachment"}
                         width={300}
                         height={200}
                         className="w-full h-auto object-cover rounded-lg hover:scale-[1.02] transition-transform"
-                        style={{ maxHeight: "200px" }}
                       />
                     </div>
                     <div className="mt-2 flex items-center justify-between">

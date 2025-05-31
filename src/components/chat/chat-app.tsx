@@ -18,19 +18,22 @@ export default function ChatbotApp() {
     chats,
     currentChat,
     createNewChat,
+    isFetchedChats,
     isLoadingChats,
     isCreatingChat,
     deleteChat,
     updateChatTitle,
     selectChat,
+    hasBeenReady,
   } = useChat();
   const pathname = usePathname();
   const chatId = pathname.includes("c") ? pathname.split("/").pop() : null;
   useEffect(() => {
-    if (chatId && !isLoadingChats) {
+    if (chatId && hasBeenReady && isFetchedChats) {
+      console.log("chatId", chatId);
       selectChat(chatId);
     }
-  }, [chatId, selectChat, isLoadingChats]);
+  }, [chatId, selectChat, isFetchedChats, hasBeenReady]);
   // Handle new chat creation with animation
   const handleNewChat = useCallback(async () => {
     if (isCreatingChat) return;
@@ -116,7 +119,8 @@ export default function ChatbotApp() {
       isCreatingChat,
     ]
   );
-  if (isLoadingChats) {
+  const shouldShowLoading = !hasBeenReady || isLoadingChats || !chats.length;
+  if (shouldShowLoading) {
     return (
       <div className="flex h-screen w-full bg-neutral-900 overflow-hidden items-center justify-center">
         <Spinner size={"xl"} />

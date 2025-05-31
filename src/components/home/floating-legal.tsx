@@ -6,10 +6,36 @@ import { FileText, Calculator, Shield, Scale } from "lucide-react";
 
 const icons = [FileText, Calculator, Shield, Scale];
 
+// Predefined positions to avoid hydration mismatch
+const generatePositions = (count: number, width: number, height: number) => {
+  const positions = [];
+  for (let i = 0; i < count; i++) {
+    // Use index-based calculation for consistent positions
+    const seed = i * 0.618033988749; // Golden ratio for better distribution
+    positions.push({
+      x: [
+        (seed * width) % width,
+        ((seed + 0.3) * width) % width,
+        ((seed + 0.6) * width) % width,
+      ],
+      y: [
+        ((seed + 0.2) * height) % height,
+        ((seed + 0.5) * height) % height,
+        ((seed + 0.8) * height) % height,
+      ],
+      duration: 15 + (i % 5) * 2, // Varied but consistent duration
+    });
+  }
+  return positions;
+};
+
 export function FloatingLegal({ count = 6 }) {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+
     // Update dimensions only on client side
     setDimensions({
       width: window.innerWidth,
@@ -27,33 +53,38 @@ export function FloatingLegal({ count = 6 }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Don't render until mounted to avoid hydration mismatch
+  if (!isMounted) {
+    return <div className="relative w-full h-full" />;
+  }
+
+  const positions = generatePositions(
+    count,
+    dimensions.width,
+    dimensions.height
+  );
+
   return (
     <div className="relative w-full h-full">
       {Array.from({ length: count }).map((_, i) => {
         const IconComponent = icons[i % icons.length];
+        const position = positions[i];
+
         return (
           <motion.div
             key={i}
             className="absolute"
             initial={{
-              x: Math.random() * dimensions.width,
-              y: Math.random() * dimensions.height,
+              x: position.x[0],
+              y: position.y[0],
             }}
             animate={{
-              x: [
-                Math.random() * dimensions.width,
-                Math.random() * dimensions.width,
-                Math.random() * dimensions.width,
-              ],
-              y: [
-                Math.random() * dimensions.height,
-                Math.random() * dimensions.height,
-                Math.random() * dimensions.height,
-              ],
+              x: position.x,
+              y: position.y,
               rotate: [0, 180, 360],
             }}
             transition={{
-              duration: 15 + Math.random() * 10,
+              duration: position.duration,
               repeat: Number.POSITIVE_INFINITY,
               ease: "linear",
             }}

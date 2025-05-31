@@ -73,12 +73,15 @@ export interface ChatContextType {
   // State
   chats: Chat[];
   currentChat: Chat | null;
+  isFetchedChats: boolean;
   isLoadingChats: boolean;
+  isErrorChats: boolean;
   error: string | null;
   isCreatingChat: boolean;
   isUpdatingTitle: boolean;
   isDeletingChat: boolean;
   isAddingMessage: boolean;
+  hasBeenReady: boolean;
 
   // Actions
   createNewChat: (data?: CreateChatRequest) => Promise<Chat | null>;
