@@ -42,15 +42,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       try {
         setError(null);
         const newChat = await apiCreateChat(data || {});
-        // setCurrentChat({
-        //   id: newChat.id,
-        //   title: newChat.title,
-        //   messages: [],
-        //   created_at: new Date(),
-        //   updated_at: new Date(),
-        //   isActive: true,
-        //   isArchived: true,
-        // });
         return newChat;
       } catch (error) {
         const errorMessage =

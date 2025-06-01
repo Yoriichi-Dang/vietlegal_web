@@ -309,7 +309,7 @@ const ChatList = memo(
   }) => {
     const handleSelectChat = useCallback(
       (chatId: string) => {
-        window.history.replaceState({}, "", `/c/${chatId}`);
+        window.history.pushState({}, "", `/c/${chatId}`);
         onSelectChat(chatId);
       },
       [onSelectChat]

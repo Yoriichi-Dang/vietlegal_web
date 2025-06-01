@@ -30,14 +30,12 @@ export default function ChatbotApp() {
   const chatId = pathname.includes("c") ? pathname.split("/").pop() : null;
   useEffect(() => {
     if (chatId && hasBeenReady && isFetchedChats) {
-      console.log("chatId", chatId);
       selectChat(chatId);
     }
   }, [chatId, selectChat, isFetchedChats, hasBeenReady]);
   // Handle new chat creation with animation
   const handleNewChat = useCallback(async () => {
     if (isCreatingChat) return;
-
     try {
       // Start creating animation
       const newChat = await createNewChat();

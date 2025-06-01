@@ -80,6 +80,7 @@ export const useChatApi = () => {
       return response.data;
     },
     onSuccess: (newChat) => {
+      console.log("newChat", newChat);
       // Update the chats list
       queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => [
         newChat,
@@ -87,7 +88,6 @@ export const useChatApi = () => {
       ]);
 
       // Cache the new chat
-      queryClient.setQueryData(["chat", newChat.id], newChat);
 
       toast.success("Đã tạo cuộc trò chuyện mới");
     },
@@ -183,25 +183,17 @@ export const useChatApi = () => {
     },
     onSuccess: (newMessage, { chatId }) => {
       // Update cached chat
-      queryClient.setQueryData(
-        ["chat", chatId],
-        (oldChat: Chat | undefined) => {
-          if (!oldChat) return oldChat;
-
-          return {
-            ...oldChat,
-            messages: [...(oldChat.messages || []), newMessage],
-            updatedAt: new Date(),
-          };
-        }
-      );
-
-      // Update chats list with new updatedAt
-      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) =>
-        oldChats.map((chat) =>
-          chat.id === chatId ? { ...chat, updatedAt: new Date() } : chat
-        )
-      );
+      queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => {
+        return oldChats.map((chat) => {
+          if (chat.id === chatId) {
+            return {
+              ...chat,
+              messages: [...(chat.messages || []), newMessage],
+            };
+          }
+          return chat;
+        });
+      });
     },
     onError: (error) => {
       console.error("Error adding message:", error);
