@@ -45,7 +45,7 @@ export const useChatApi = () => {
     refetchOnMount: true,
     refetchOnReconnect: true,
   });
-
+  console.log(isFetchedChats);
   // Fetch specific chat
   const fetchChat = async (chatId: string): Promise<Chat | null> => {
     if (!isReady || !chatId) return null;
@@ -80,16 +80,11 @@ export const useChatApi = () => {
       return response.data;
     },
     onSuccess: (newChat) => {
-      console.log("newChat", newChat);
-      // Update the chats list
+      toast.success("Đã tạo cuộc trò chuyện mới");
       queryClient.setQueryData(["chats"], (oldChats: Chat[] = []) => [
         newChat,
         ...oldChats,
       ]);
-
-      // Cache the new chat
-
-      toast.success("Đã tạo cuộc trò chuyện mới");
     },
     onError: (error) => {
       console.error("Error creating chat:", error);
@@ -119,10 +114,6 @@ export const useChatApi = () => {
             : chat
         )
       );
-
-      // Update cached chat
-      queryClient.setQueryData(["chat", updatedChat.id], updatedChat);
-
       toast.success("Đã cập nhật tiêu đề");
     },
     onError: (error) => {
@@ -152,6 +143,28 @@ export const useChatApi = () => {
     onError: (error) => {
       console.error("Error deleting chat:", error);
       toast.error("Không thể xóa cuộc trò chuyện");
+    },
+  });
+  const deleteAllChatMutation = useMutation({
+    mutationFn: async (): Promise<void> => {
+      if (!isReady) throw new Error("Not authenticated");
+      const chats = queryClient.getQueryData<Chat[]>(["chats"]) || [];
+      if (chats.length === 0) return;
+      const chatIds = chats.map((chat) => chat.id);
+      await Promise.all(
+        chatIds.map((chatId) => axiosAuth.delete(CHAT_API.deleteChat(chatId)))
+      );
+    },
+    onSuccess: () => {
+      // Clear chats list
+      queryClient.setQueryData(["chats"], []);
+      // Clear all cached chats
+      queryClient.removeQueries({ queryKey: ["chat"] });
+      toast.success("Đã xóa tất cả cuộc trò chuyện");
+    },
+    onError: (error) => {
+      console.error("Error deleting all chats:", error);
+      toast.error("Không thể xóa tất cả cuộc trò chuyện");
     },
   });
 
@@ -219,6 +232,7 @@ export const useChatApi = () => {
     updateTitle: updateTitleMutation.mutateAsync,
     deleteChat: deleteChatMutation.mutateAsync,
     addMessage: addMessageMutation.mutateAsync,
+    deleteAllChats: deleteAllChatMutation.mutateAsync,
 
     // Loading states
     isCreatingChat: createChatMutation.isPending,

@@ -117,7 +117,7 @@ export default function ChatbotApp() {
       isCreatingChat,
     ]
   );
-  const shouldShowLoading = !hasBeenReady || isLoadingChats || !chats.length;
+  const shouldShowLoading = !hasBeenReady || isLoadingChats;
   if (shouldShowLoading) {
     return (
       <div className="flex h-screen w-full bg-neutral-900 overflow-hidden items-center justify-center">

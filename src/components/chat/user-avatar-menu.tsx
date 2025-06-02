@@ -18,6 +18,7 @@ import {
   IconCheck,
   IconEye,
   IconEyeOff,
+  IconTrash,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -28,6 +29,7 @@ import { signOut, useSession } from "next-auth/react";
 import useAxiosAuth from "@/hooks/useAxiosAuth";
 import { profileApiUrl } from "@/utils/config";
 import { uploadAvatar } from "@/utils/upload";
+import { useChat } from "@/provider/chat-provider";
 
 interface UserAvatarMenuProps {
   className?: string;
@@ -36,7 +38,7 @@ interface UserAvatarMenuProps {
 export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
-
+  const { deleteAllChats } = useChat();
   const { data: session } = useSession();
 
   const menuItems = [
@@ -71,6 +73,13 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
       description: "Control your privacy settings",
     },
     {
+      id: "delete all chats",
+      label: "Delete All Chats",
+      icon: <IconTrash className="h-4 w-4" />,
+      description: "Get help and support",
+      danger: true, // Placeholder for future implementation
+    },
+    {
       id: "logout",
       label: "Sign Out",
       icon: <IconLogout className="h-4 w-4" />,
@@ -79,11 +88,14 @@ export default function UserAvatarMenu({ className }: UserAvatarMenuProps) {
     },
   ];
 
-  const handleMenuItemClick = (itemId: string) => {
+  const handleMenuItemClick = async (itemId: string) => {
     setIsDropdownOpen(false);
     if (itemId === "logout") {
       // Handle logout
       signOut({ callbackUrl: "/" });
+    } else if (itemId === "delete all chats") {
+      await deleteAllChats();
+      // Placeholder for delete all chats functionality
     } else {
       setActiveDialog(itemId);
     }

@@ -12,15 +12,14 @@ import type { ChatAttachment, ChatMessage } from "@/types/chat";
 import { useChat as useChatProvider } from "@/provider/chat-provider";
 import { useChat as useChatAI } from "@ai-sdk/react";
 import { MODEL } from "@/constants/model";
-import type { Attachment } from "ai";
+import { Attachment } from "ai";
 import { v4 as uuidv4 } from "uuid";
-
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   showMenuButton?: boolean;
 }
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 10MB
 
 export default function ChatInterface({
   onToggleSidebar,
@@ -34,16 +33,14 @@ export default function ChatInterface({
     updateChatTitle,
     createNewChat,
   } = useChatProvider();
+  const [isFirstMessageNewChat, setIsFirstMessageNewChat] =
+    useState<boolean>(false);
+  const [newChatId, setNewChatId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [pendingUserMessage, setPendingUserMessage] =
-    useState<ChatMessage | null>(null);
-  const [pendingAIMessage, setPendingAIMessage] = useState<any | null>(null);
-  const [newChatId, setNewChatId] = useState<string | null>(null);
-  const [isProcessingMessage, setIsProcessingMessage] = useState(false);
   const { messages, status, input, handleInputChange, handleSubmit } =
     useChatAI({
-      id: currentChat?.id || newChatId || undefined,
       initialMessages:
         (currentChat &&
           currentChat?.messages?.map((message) => {
@@ -64,116 +61,48 @@ export default function ChatInterface({
           })) ||
         [],
       onFinish: async (message) => {
-        // Store AI response
-        const aiMessage: Omit<ChatMessage, "id" | "createdAt" | "updatedAt"> = {
-          sender_type: "model" as const,
+        if (!currentChat) {
+          setMessage(message.content);
+          return;
+        }
+        await addMessage(currentChat.id, {
+          sender_type: "model",
           message_type: "text",
           model_id: MODEL.id.toString(),
           content: message.content,
-        };
-
-        // If we have a current chat ID, add message directly
-        if (currentChat?.id) {
-          try {
-            await addMessage(currentChat.id, aiMessage);
-          } catch (error) {
-            console.error("Error adding AI message to existing chat:", error);
-            toast.error("Không thể lưu phản hồi");
-          }
-        }
-        // If we have a new chat ID but currentChat hasn't updated yet
-        else if (newChatId) {
-          try {
-            await addMessage(newChatId, aiMessage);
-          } catch (error) {
-            console.error("Error adding AI message to new chat:", error);
-            toast.error("Không thể lưu phản hồi");
-          }
-        }
-        // Store for later processing
-        else {
-          console.log("Storing AI message for later processing");
-          setPendingAIMessage(aiMessage);
-        }
+        });
       },
     });
-
-  // Process pending messages when chat ID becomes available
   useEffect(() => {
-    const processPendingMessages = async () => {
-      // Skip if already processing or no pending messages
-      if (isProcessingMessage || (!pendingUserMessage && !pendingAIMessage))
-        return;
-
-      // Get the effective chat ID (either current or new)
-      const effectiveChatId = currentChat?.id || newChatId;
-      if (!effectiveChatId) return;
-
-      setIsProcessingMessage(true);
-      try {
-        // Process user message first
-        if (pendingUserMessage) {
-          await addMessage(effectiveChatId, pendingUserMessage);
-          setPendingUserMessage(null);
-        }
-
-        // Then process AI message
-        if (pendingAIMessage) {
-          await addMessage(effectiveChatId, pendingAIMessage);
-          setPendingAIMessage(null);
-        }
-      } catch (error) {
-        console.error("Error processing pending messages:", error);
-        toast.error("Không thể lưu tin nhắn");
-      } finally {
-        setIsProcessingMessage(false);
-      }
-    };
-
-    processPendingMessages();
-  }, [
-    currentChat?.id,
-    newChatId,
-    pendingUserMessage,
-    pendingAIMessage,
-    addMessage,
-    isProcessingMessage,
-  ]);
-
+    if (isFirstMessageNewChat && newChatId && message) {
+      addMessage(newChatId, {
+        sender_type: "model",
+        message_type: "text",
+        model_id: MODEL.id.toString(),
+        content: message,
+      });
+      setIsFirstMessageNewChat(false);
+    }
+  }, [isFirstMessageNewChat, newChatId, message, addMessage]);
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
     setIsUploading(true);
-
-    const uploadPromises = Array.from(files).map(async (file) => {
-      try {
-        const { fileUrl } = await uploadFile(file);
-        const newFile: ChatAttachment = {
-          id: uuidv4(),
-          file_name: file.name,
-          file_type: file.type,
-          file_size: file.size,
-          file_url: fileUrl,
-        };
-        return newFile;
-      } catch (error) {
-        console.error("Upload error:", error);
-        toast.error(`Không thể upload file ${file.name}`);
-        return null;
-      }
-    });
-
-    Promise.all(uploadPromises).then((results) => {
-      const successfulUploads = results.filter(
-        (file) => file !== null
-      ) as ChatAttachment[];
-      setAttachedFiles((prev) => [...prev, ...successfulUploads]);
+    Array.from(files).forEach(async (file) => {
+      const { fileUrl } = await uploadFile(file);
+      const newFile: ChatAttachment = {
+        id: uuidv4(),
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        file_url: fileUrl,
+      };
+      setAttachedFiles((prev) => [...prev, newFile]);
       setIsUploading(false);
     });
 
     event.target.value = "";
   };
-
   const deleteFile = async (fileKey: string) => {
     try {
       const response = await fetch("/api/delete-file", {
@@ -196,28 +125,21 @@ export default function ChatInterface({
       throw error;
     }
   };
-
   // Remove file
   const removeFile = async (fileId: string) => {
-    try {
-      const fileKey = attachedFiles
-        .find((file) => file.id === fileId)
-        ?.file_url?.split("/")
-        .pop();
-      if (fileKey) {
-        setAttachedFiles((prev) => {
-          const filtered = prev.filter((file) => file.id !== fileId);
-          return filtered;
-        });
-        await deleteFile(fileKey);
-        toast.success("File deleted successfully");
-      }
-    } catch (error) {
-      console.error("Error removing file:", error);
-      toast.error("Không thể xóa file");
+    const fileKey = attachedFiles
+      .find((file) => file.id === fileId)
+      ?.file_url?.split("/")
+      .pop();
+    if (fileKey) {
+      setAttachedFiles((prev) => {
+        const filtered = prev.filter((file) => file.id !== fileId);
+        return filtered;
+      });
+      await deleteFile(fileKey);
+      toast.success("File deleted successfully");
     }
   };
-
   const computeSHA256 = async (file: File) => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
@@ -227,7 +149,6 @@ export default function ChatInterface({
       .join("");
     return hashHex;
   };
-
   const uploadFile = async (file: File) => {
     const response = await fetch("/api/signed-url", {
       method: "POST",
@@ -244,9 +165,8 @@ export default function ChatInterface({
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.failure || "Upload failed");
+      return { failure: data.failure };
     }
-
     await fetch(data.success.url, {
       method: "PUT",
       headers: {
@@ -254,11 +174,10 @@ export default function ChatInterface({
       },
       body: file,
     });
-
     const fileUrl = data.success.url.split("?")[0];
     return { fileUrl, id: data.success.id };
   };
-
+  // Handle form submit
   // Helper function to convert ChatAttachment to Attachment
   const convertToAIAttachments = (
     chatAttachments: ChatAttachment[]
@@ -276,79 +195,57 @@ export default function ChatInterface({
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim() === "") {
-      toast.error("Vui lòng nhập tin nhắn");
+      toast.error("Vui lòng nhập tin nhắn ");
       return;
     }
-
+    const userMessage: ChatMessage = {
+      sender_type: "user",
+      message_type: "text",
+      content: input.trim(),
+      attachments: attachedFiles,
+    };
+    const aiAttachments = convertToAIAttachments(attachedFiles);
+    const submitOptions: any = {};
+    if (aiAttachments.length > 0) {
+      submitOptions.experimental_attachments = aiAttachments;
+    }
+    handleSubmit(e, submitOptions);
     try {
-      // Prepare user message
-      const userMessage: ChatMessage = {
-        sender_type: "user",
-        message_type: "text",
-        content: input.trim(),
-        attachments: attachedFiles,
-      };
-
-      // Convert ChatAttachment[] to Attachment[] for AI SDK
-      const aiAttachments = convertToAIAttachments(attachedFiles);
-
-      // Create options object
-      const submitOptions: any = {};
-
-      // Only add attachments if there are any
-      if (aiAttachments.length > 0) {
-        submitOptions.experimental_attachments = aiAttachments;
-      }
-
-      // Handle case when no current chat exists
-      if (!currentChat?.id) {
+      if (currentChat) {
+        if (!currentChat.messages) {
+          await updateChatTitle(
+            currentChat?.id || "",
+            input.trim().slice(0, 20)
+          );
+        }
+        await addMessage(currentChat?.id || "", userMessage);
+      } else {
+        // new chat
         const newChat = await createNewChat({
           title: input.trim().slice(0, 20),
         });
-
-        if (newChat?.id) {
-          setNewChatId(newChat.id);
-
-          // Update URL
+        if (newChat) {
+          setIsFirstMessageNewChat(true);
           window.history.replaceState({}, "", `/c/${newChat.id}`);
-
-          // Try to add message directly
-          try {
-            await addMessage(newChat.id, userMessage);
-          } catch (error) {
-            console.error(
-              "Error adding user message to new chat, storing for later:",
-              error
-            );
-            setPendingUserMessage(userMessage);
-          }
-
-          // Submit to AI
-          handleSubmit(e, submitOptions);
-        } else {
-          throw new Error("Không thể tạo cuộc trò chuyện mới");
+          await addMessage(newChat.id, userMessage);
+          setNewChatId(newChat.id);
         }
-      } else {
-        // Already have currentChat.id
-        if (!currentChat.messages?.length) {
-          await updateChatTitle(currentChat.id, input.trim().slice(0, 20));
-        }
-
-        // Add user message first
-        try {
-          await addMessage(currentChat.id, userMessage);
-        } catch (error) {
-          console.error("Error adding user message to existing chat:", error);
-          toast.error("Không thể gửi tin nhắn");
-          return; // Don't proceed if we can't add the user message
-        }
-
-        // Then submit to AI
-        handleSubmit(e, submitOptions);
       }
-
-      // Clear attachments
-      setAttachedFiles([]);
+      //   // // Submit with options
+      //   if (!currentChat) {
+      //     const newChat = await createNewChat({
+      //       title: input.trim().slice(0, 20),
+      //     });
+      //     if (newChat) {
+      //       window.history.replaceState({}, "", `/c/${newChat.id}`);
+      //       await addMessage(newChat.id, userMessage);
+      //       handleSubmit(e, submitOptions);
+      //     }
+      //   } else {
+      //     handleSubmit(e, submitOptions);
+      //     await addMessage(currentChat?.id || "", userMessage);
+      //   }
+      if (attachedFiles.length > 0) setAttachedFiles([]);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Không thể gửi tin nhắn");
@@ -402,12 +299,7 @@ export default function ChatInterface({
         attachedFiles={attachedFiles}
         handleFileUpload={handleFileUpload}
         handleInputChange={handleInputChange}
-        isLoading={
-          status === "submitted" ||
-          isAddingMessage ||
-          isUploading ||
-          isProcessingMessage
-        }
+        isLoading={status === "submitted" || isAddingMessage || isUploading}
         input={input}
         removeFile={removeFile}
       />

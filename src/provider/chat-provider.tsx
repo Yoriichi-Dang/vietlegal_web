@@ -25,6 +25,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     isFetchedChats,
     isLoadingChats,
     isErrorChats,
+    deleteAllChats,
     fetchChat,
     createChat: apiCreateChat,
     addMessage: apiAddMessage,
@@ -70,6 +71,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     },
     [fetchChat]
   );
+  const deleteAll = useCallback(async () => {
+    try {
+      setError(null);
+      await deleteAllChats();
+      setCurrentChat(null);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Không thể xóa tất cả cuộc trò chuyện";
+      setError(errorMessage);
+    }
+  }, [deleteAllChats]);
   const addMessage = useCallback(
     async (
       chatId: string,
@@ -148,6 +162,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         updateChatTitle,
         deleteChat,
         hasBeenReady,
+        deleteAllChats: deleteAll,
       }}
     >
       {children}

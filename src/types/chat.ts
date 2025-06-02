@@ -92,4 +92,5 @@ export interface ChatContextType {
     message: Omit<ChatMessage, "id" | "createdAt" | "updatedAt">
   ) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
+  deleteAllChats: () => Promise<void>;
 }
