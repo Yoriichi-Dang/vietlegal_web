@@ -45,7 +45,6 @@ export const useChatApi = () => {
     refetchOnMount: true,
     refetchOnReconnect: true,
   });
-  console.log(isFetchedChats);
   // Fetch specific chat
   const fetchChat = async (chatId: string): Promise<Chat | null> => {
     if (!isReady || !chatId) return null;

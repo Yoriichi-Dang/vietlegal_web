@@ -45,6 +45,7 @@ export default function ChatMessage({
         messageIndex={index}
         isRegenerating={isRegenerating}
         copiedId={copiedId}
+        experimental_attachments={experimental_attachments}
       />
     );
   }

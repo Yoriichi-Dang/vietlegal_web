@@ -17,12 +17,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ProjectSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   setSelectedItem?: (item: any) => void;
   setShowFileViewer?: (show: boolean) => void;
+  className?: string;
 }
 
 export default function ProjectSidebar({
@@ -30,6 +32,7 @@ export default function ProjectSidebar({
   setActiveTab,
   setSelectedItem = () => {},
   setShowFileViewer = () => {},
+  className,
 }: ProjectSidebarProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     "main",
@@ -75,7 +78,10 @@ export default function ProjectSidebar({
     <motion.aside
       initial={{ x: -300 }}
       animate={{ x: 0 }}
-      className="w-64 bg-neutral-900 border-r border-neutral-700 flex flex-col h-screen"
+      className={cn(
+        "w-64 bg-neutral-900 border-r border-neutral-700 flex flex-col h-screen custom-scrollbar",
+        className
+      )}
     >
       {/* Logo */}
       <div className="p-6 border-b border-neutral-700">
@@ -86,7 +92,7 @@ export default function ProjectSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 p-4 overflow-y-auto">
         {/* Main Navigation */}
         <div className="space-y-1 mb-6">
           <div className="px-2 mb-3">

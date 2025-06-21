@@ -10,7 +10,7 @@ const RequirementItem: React.FC<RequirementItemProps> = ({ isValid, text }) => {
     <div className="flex items-center">
       <div
         className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${
-          isValid ? "text-green-500" : "text-foreground/40"
+          isValid ? "text-green-500" : "text-gray-400"
         }`}
       >
         {isValid ? (
@@ -21,7 +21,7 @@ const RequirementItem: React.FC<RequirementItemProps> = ({ isValid, text }) => {
       </div>
       <p
         className={`text-xs sm:text-sm ${
-          isValid ? "text-green-600" : "text-foreground/60"
+          isValid ? "text-green-600" : "text-gray-500"
         }`}
       >
         {text}

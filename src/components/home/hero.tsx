@@ -83,8 +83,12 @@ export default function Hero() {
               <div className="text-gray-400">Văn bản pháp luật</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-pink-400">5,000+</div>
-              <div className="text-gray-400">Khách hàng tin tưởng</div>
+              <div className="text-2xl font-bold text-pink-400">
+                Cập nhật thông tin mới
+              </div>
+              <div className="text-gray-400">
+                Có khả năng cung cấp thông tin ngoài
+              </div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-400">24/7</div>

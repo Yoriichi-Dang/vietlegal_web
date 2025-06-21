@@ -25,13 +25,13 @@ export default function Navbar() {
         <span className="text-white font-medium text-xl">LegalWise AI</span>
       </Link>
 
-      <div className="hidden md:flex items-center space-x-8">
+      {/* <div className="hidden md:flex items-center space-x-8">
         <NavLink href="/tax-law">Luật Thuế</NavLink>
         <NavLink href="/insurance-law">Luật Bảo Hiểm</NavLink>
         <NavLink href="/consultation">Tư Vấn</NavLink>
         <NavLink href="/projects">Dự Án</NavLink>
         <NavLink href="/pricing">Bảng Giá</NavLink>
-      </div>
+      </div> */}
 
       <div className="hidden md:flex items-center space-x-4">
         {session ? (

@@ -30,7 +30,7 @@ const FormInput: React.FC<FormInputProps> = ({
     <div>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-foreground mb-1"
+        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
       >
         {label}
       </label>
@@ -38,8 +38,8 @@ const FormInput: React.FC<FormInputProps> = ({
         <input
           id={id}
           className={`w-full px-3 py-2 sm:px-4 sm:py-3 rounded-lg border ${
-            error ? "border-red-500" : "border-foreground/20"
-          } focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base bg-background text-foreground ${
+            error ? "border-red-500" : "border-gray-300 dark:border-gray-600"
+          } focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
             className || ""
           }`}
           {...props}
@@ -49,7 +49,7 @@ const FormInput: React.FC<FormInputProps> = ({
           <button
             type="button"
             onClick={onTogglePassword}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-foreground/60"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
           >
             {showPassword ? (
               <EyeOffIcon className="h-4 w-4 sm:h-5 sm:w-5" />

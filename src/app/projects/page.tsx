@@ -163,6 +163,127 @@ export default function ProjectsPage() {
         tags: ["ảnh", "biên lai", "jpg"],
         createdAt: new Date(2023, 11, 20),
       },
+      // Thêm data cho danh mục Thuế
+      {
+        id: "9",
+        name: "Khai báo thuế VAT.pdf",
+        type: "file",
+        fileType: "pdf",
+        size: "1.8 MB",
+        icon: "FileText",
+        lastModified: "2 ngày trước",
+        shared: false,
+        starred: false,
+        owner: "Nguyễn Văn A",
+        permissions: "read",
+        tags: ["thuế", "VAT", "khai báo"],
+        createdAt: new Date(2023, 11, 17),
+      },
+      {
+        id: "10",
+        name: "Hướng dẫn tính thuế TNCN",
+        type: "project",
+        items: "8 tài liệu",
+        icon: "Calculator",
+        lastModified: "1 ngày trước",
+        shared: true,
+        starred: false,
+        owner: "Lê Thị C",
+        permissions: "write",
+        tags: ["thuế", "TNCN", "hướng dẫn"],
+        createdAt: new Date(2023, 11, 19),
+      },
+      // Thêm data cho danh mục Bảo hiểm
+      {
+        id: "11",
+        name: "Quy trình bảo hiểm y tế",
+        type: "project",
+        items: "6 tài liệu",
+        icon: "Shield",
+        lastModified: "3 ngày trước",
+        shared: true,
+        starred: true,
+        owner: "Phạm Văn D",
+        permissions: "admin",
+        tags: ["bảo hiểm", "y tế", "quy trình"],
+        createdAt: new Date(2023, 11, 16),
+      },
+      {
+        id: "12",
+        name: "Mẫu đơn bảo hiểm xã hội.docx",
+        type: "file",
+        fileType: "word",
+        size: "245 KB",
+        icon: "FileText",
+        lastModified: "4 ngày trước",
+        shared: false,
+        starred: false,
+        owner: "Trần Thị B",
+        permissions: "write",
+        tags: ["bảo hiểm", "xã hội", "mẫu đơn"],
+        createdAt: new Date(2023, 11, 15),
+      },
+      // Thêm data cho danh mục Pháp lý
+      {
+        id: "13",
+        name: "Luật doanh nghiệp 2020",
+        type: "file",
+        fileType: "pdf",
+        size: "5.2 MB",
+        icon: "FileText",
+        lastModified: "1 tuần trước",
+        shared: true,
+        starred: true,
+        owner: "Hoàng Văn E",
+        permissions: "read",
+        tags: ["luật", "doanh nghiệp", "2020"],
+        createdAt: new Date(2023, 11, 12),
+      },
+      {
+        id: "14",
+        name: "Tư vấn hợp đồng lao động",
+        type: "project",
+        items: "10 tài liệu",
+        icon: "Scale",
+        lastModified: "2 ngày trước",
+        shared: false,
+        starred: false,
+        owner: "Ngô Thị F",
+        permissions: "admin",
+        tags: ["tư vấn", "hợp đồng", "lao động"],
+        createdAt: new Date(2023, 11, 17),
+      },
+      // Thêm data cho bộ sưu tập Mẫu văn bản
+      {
+        id: "15",
+        name: "Mẫu hợp đồng thuê nhà.docx",
+        type: "file",
+        fileType: "word",
+        size: "180 KB",
+        icon: "FileText",
+        lastModified: "5 ngày trước",
+        shared: true,
+        starred: false,
+        owner: "Lê Văn C",
+        permissions: "write",
+        tags: ["mẫu đơn", "hợp đồng", "thuê nhà"],
+        createdAt: new Date(2023, 11, 14),
+      },
+      {
+        id: "16",
+        name: "Mẫu đơn xin việc.docx",
+        type: "file",
+        fileType: "word",
+        size: "120 KB",
+        icon: "FileText",
+        lastModified: "1 tuần trước",
+        shared: false,
+        starred: true,
+        owner: "Phạm Thị D",
+        permissions: "read",
+        tags: ["mẫu đơn", "xin việc", "word"],
+        createdAt: new Date(2023, 11, 11),
+      },
     ];
 
     setProjects(mockProjects as any);
@@ -354,17 +475,18 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 flex">
+    <div className="h-screen bg-neutral-900 flex overflow-hidden">
       {/* Sidebar */}
       <ProjectSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         setSelectedItem={setSelectedItem}
         setShowFileViewer={setShowFileViewer}
+        className="h-screen overflow-y-auto"
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <ProjectHeader
           searchQuery={searchQuery}
@@ -381,7 +503,7 @@ export default function ProjectsPage() {
         />
 
         {/* Content Area */}
-        <main className="flex-1 p-6 bg-neutral-900">
+        <main className="flex-1 p-6 bg-neutral-900 overflow-y-auto">
           {/* Action Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -23,6 +23,7 @@ const allowedFileTypes = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv", // Đã thêm định dạng CSV
 ];
 
 const maxFileSize = 1048576 * 15; // 15 MB
@@ -85,7 +86,6 @@ export async function POST(request: NextRequest) {
     const url = await getSignedUrl(s3Client, putObjectCommand, {
       expiresIn: 60,
     });
-
     return NextResponse.json({
       success: { url, id: 1, fileName: generatedFileName },
     });

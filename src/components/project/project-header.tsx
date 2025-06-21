@@ -56,7 +56,6 @@ export default function ProjectHeader({
   setFilterOptions,
 }: ProjectHeaderProps) {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-
   const getSortLabel = (option: SortOption): string => {
     switch (option) {
       case "name-asc":
@@ -319,14 +318,8 @@ export default function ProjectHeader({
               <List className="w-4 h-4" />
             </button>
           </div>
-
-          <button className="p-2 text-neutral-400 hover:text-white transition-colors relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-          </button>
-
           <Avatar className="w-8 h-8">
-            <AvatarImage src="/placeholder.svg?height=32&width=32" />
+            <AvatarImage src={"/placeholder.svg?height=32&width=32"} />
             <AvatarFallback className="bg-blue-600">
               <User className="w-4 h-4" />
             </AvatarFallback>

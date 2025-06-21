@@ -3,10 +3,11 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { IconMenu2 } from "@tabler/icons-react";
 import UserAvatarMenu from "./user-avatar-menu";
 import ChatInput from "./chat-input";
 import ChatContent from "./chat-content";
+import ResearchPanel from "./research-panel";
+import ThinkingAnimation from "./thinking-animation";
 import { toast } from "sonner";
 import type { ChatAttachment, ChatMessage } from "@/types/chat";
 import { useChat as useChatProvider } from "@/provider/chat-provider";
@@ -14,6 +15,7 @@ import { useChat as useChatAI } from "@ai-sdk/react";
 import { MODEL } from "@/constants/model";
 import { Attachment } from "ai";
 import { v4 as uuidv4 } from "uuid";
+import { IconSparkles, IconMenu2 } from "@tabler/icons-react";
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   showMenuButton?: boolean;
@@ -26,6 +28,8 @@ export default function ChatInterface({
   showMenuButton = true,
 }: ChatInterfaceProps) {
   const [attachedFiles, setAttachedFiles] = useState<ChatAttachment[]>([]);
+  const [showResearchPanel, setShowResearchPanel] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
   const {
     addMessage,
     currentChat,
@@ -61,6 +65,14 @@ export default function ChatInterface({
           })) ||
         [],
       onFinish: async (message) => {
+        // Hide thinking animation
+        setShowThinking(false);
+
+        // Auto-show research panel after AI response for research queries
+        if (shouldShowResearchPanel(message.content)) {
+          setTimeout(() => setShowResearchPanel(true), 500);
+        }
+
         if (!currentChat) {
           setMessage(message.content);
           return;
@@ -191,6 +203,34 @@ export default function ChatInterface({
       }));
   };
 
+  // Check if message should trigger research panel
+  const shouldShowResearchPanel = (message: string) => {
+    const researchKeywords = [
+      "nghiên cứu",
+      "research",
+      "tìm hiểu",
+      "phân tích",
+      "điều tra",
+      "luật",
+      "quy định",
+      "văn bản",
+      "pháp luật",
+      "thuế",
+      "báo cáo",
+      "tổng hợp",
+      "thống kê",
+      "dữ liệu",
+      "bảo hiểm",
+      "so sánh",
+      "đánh giá",
+      "xu hướng",
+      "thị trường",
+      "chính sách",
+    ];
+    const messageLower = message.toLowerCase();
+    return researchKeywords.some((keyword) => messageLower.includes(keyword));
+  };
+
   // Handle form submit
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -198,6 +238,12 @@ export default function ChatInterface({
       toast.error("Vui lòng nhập tin nhắn ");
       return;
     }
+
+    // Auto-show thinking animation for relevant queries
+    if (shouldShowResearchPanel(input.trim())) {
+      setShowThinking(true);
+    }
+
     const userMessage: ChatMessage = {
       sender_type: "user",
       message_type: "text",
@@ -205,7 +251,15 @@ export default function ChatInterface({
       attachments: attachedFiles,
     };
     const aiAttachments = convertToAIAttachments(attachedFiles);
-    const submitOptions: any = {};
+    const submitOptions: any = {
+      body: {
+        chat_id: currentChat?.id || "",
+        files: attachedFiles.map((file) => ({
+          file_id: file.id,
+          file_url: file.file_url!,
+        })),
+      },
+    };
     if (aiAttachments.length > 0) {
       submitOptions.experimental_attachments = aiAttachments;
     }
@@ -280,29 +334,96 @@ export default function ChatInterface({
           )}
         </div>
 
-        {/* Right side - User info */}
+        {/* Right side - Controls */}
         <div className="flex items-center gap-3 text-neutral-400">
+          {/* Research Panel Toggle Button */}
+          <motion.button
+            onClick={() => setShowResearchPanel(!showResearchPanel)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              showResearchPanel
+                ? "text-blue-400 bg-blue-500/20"
+                : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+            }`}
+            title="Toggle Research Panel"
+          >
+            <IconSparkles className="h-5 w-5" />
+          </motion.button>
+
           <UserAvatarMenu />
         </div>
       </div>
 
-      {/* Messages */}
-      <ChatContent
-        messages={messages || []}
-        isLoading={status === "submitted"}
-        isStreaming={status === "streaming"}
-      />
+      {/* Main Content Area - Chat + Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Chat Messages Area */}
+        <div
+          className={`flex flex-col transition-all duration-300 ${
+            showResearchPanel ? "w-[50%]" : "w-full"
+          }`}
+        >
+          <ChatContent
+            messages={messages || []}
+            isLoading={status === "submitted"}
+            isStreaming={status === "streaming"}
+          />
 
-      {/* Input Area */}
-      <ChatInput
-        onSubmit={onSubmit}
-        attachedFiles={attachedFiles}
-        handleFileUpload={handleFileUpload}
-        handleInputChange={handleInputChange}
-        isLoading={status === "submitted" || isAddingMessage || isUploading}
-        input={input}
-        removeFile={removeFile}
-      />
+          {/* Thinking Animation */}
+          {showThinking && (
+            <div className="px-4 md:px-6 pb-4">
+              <div className="max-w-4xl mx-auto">
+                <ThinkingAnimation
+                  isVisible={showThinking}
+                  onComplete={() => {
+                    setShowThinking(false);
+                    setTimeout(() => setShowResearchPanel(true), 500);
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Input Area - Inside Chat Area */}
+
+          <ChatInput
+            onSubmit={onSubmit}
+            attachedFiles={attachedFiles}
+            handleFileUpload={handleFileUpload}
+            handleInputChange={handleInputChange}
+            isLoading={status === "submitted" || isAddingMessage || isUploading}
+            input={input}
+            removeFile={removeFile}
+          />
+        </div>
+
+        {/* Research Panel */}
+        <ResearchPanel
+          isOpen={showResearchPanel}
+          onClose={() => setShowResearchPanel(false)}
+          title="Tổng hợp về bảo hiểm"
+          showSourcesUsed={true}
+          showTable={true}
+          markdownContent={`
+## Tổng quan về thị trường bảo hiểm Việt Nam
+
+### A. Định nghĩa và vai trò của bảo hiểm trong nền kinh tế
+
+Bảo hiểm, trong bối cảnh kinh tế Việt Nam, được định nghĩa là một hoạt động kinh doanh cốt lõi nhằm gia định và đa dạng hóa rủi ro. Mô hình này hoạt động dựa trên nguyên tắc tập hợp rủi ro từ các cá nhân hoặc tổ chức riêng lẻ và phân phối lại chúng trên một danh mục đầu tư lớn hơn, qua đó giảm thiểu tác động của các sự kiện bất ngờ đối với từng chủ thể.
+
+### B. Phân loại các loại hình bảo hiểm tại Việt Nam
+
+Hệ thống bảo hiểm tại Việt Nam được cấu trúc một cách chặt chẽ, phân chia thành hai loại hình chính để đáp ứng các nhu cầu khác nhau:
+
+1. **Bảo hiểm nhân thọ**: Tập trung vào việc bảo vệ tính mạng và sức khỏe con người
+2. **Bảo hiểm phi nhân thọ**: Bao gồm bảo hiểm tài sản, trách nhiệm dân sự, và các rủi ro khác
+
+### C. Thách thức và cơ hội của ngành bảo hiểm
+
+Thị trường bảo hiểm Việt Nam, mặc dù có tiềm năng lớn, đang phải đối mặt với nhiều thách thức đáng kể, đồng thời cũng mở ra những cơ hội phát triển mới.
+          `}
+        />
+      </div>
     </div>
   );
 }
