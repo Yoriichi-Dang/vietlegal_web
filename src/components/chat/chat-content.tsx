@@ -51,7 +51,7 @@ const ChatContent = ({
   useEffect(() => {
     const timeoutId = setTimeout(() => scrollToBottom(), 50);
     return () => clearTimeout(timeoutId);
-  }, [messages.length, isStreaming, scrollToBottom]);
+  }, [messages.length, isLoading, isStreaming, scrollToBottom]);
 
   // Auto scroll during streaming (when last message content changes)
   useEffect(() => {
@@ -146,9 +146,12 @@ const ChatContent = ({
               copiedId={copiedId}
             />
           ))}
-        </AnimatePresence>
 
-        {isLoading && <LoadingMessage />}
+          {/* Loading message throughout the entire process until completion */}
+          {isLoading && !isStreaming && (
+            <LoadingMessage key="loading-message" />
+          )}
+        </AnimatePresence>
 
         {/* Invisible element to scroll to */}
         <div ref={messagesEndRef} className="h-1" />

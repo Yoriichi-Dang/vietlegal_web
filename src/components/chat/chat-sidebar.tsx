@@ -3,8 +3,6 @@
 import type React from "react";
 import { useState, useCallback, useMemo, memo } from "react";
 import {
-  IconTemplate,
-  IconFolder,
   IconMessageCircle,
   IconPlus,
   IconSparkles,
@@ -16,6 +14,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { Chat } from "@/types/chat";
+import Link from "next/link";
 
 interface ChatSidebarProps {
   chats: Chat[];
@@ -223,16 +222,6 @@ const UtilityLinks = memo(
           onClick: onNewChat,
           disabled: isCreatingChat,
         },
-        {
-          label: "My projects",
-          href: "/projects",
-          icon: <IconFolder className="h-4 w-4 shrink-0" />,
-        },
-        {
-          label: "Templates",
-          href: "/template",
-          icon: <IconTemplate className="h-4 w-4 shrink-0" />,
-        },
       ],
       [isCreatingChat, onNewChat]
     );
@@ -417,16 +406,16 @@ const CollapsedUtilityLinks = memo(
           onClick: onNewChat,
           disabled: isCreatingChat,
         },
-        {
-          label: "My projects",
-          href: "/projects",
-          icon: <IconFolder className="h-5 w-5" />,
-        },
-        {
-          label: "Templates",
-          href: "/template",
-          icon: <IconTemplate className="h-5 w-5" />,
-        },
+        // {
+        //   label: "My projects",
+        //   href: "/projects",
+        //   icon: <IconFolder className="h-5 w-5" />,
+        // },
+        // {
+        //   label: "Templates",
+        //   href: "/template",
+        //   icon: <IconTemplate className="h-5 w-5" />,
+        // },
       ],
       [isCreatingChat, onNewChat]
     );
@@ -511,9 +500,9 @@ const SidebarContent = memo(
                   <span className="text-white font-bold text-sm">LW</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-white font-bold text-lg">
+                  <Link href="/" className="text-white font-bold text-lg">
                     LegalWise
-                  </span>
+                  </Link>
                   <span className="text-blue-400 text-sm font-medium">AI</span>
                 </div>
               </div>

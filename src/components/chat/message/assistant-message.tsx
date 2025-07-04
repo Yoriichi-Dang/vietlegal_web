@@ -30,30 +30,6 @@ const detectTableData = (content: string) => {
   return tablePatterns.some((pattern) => pattern.test(content));
 };
 
-// Function to extract sample table data from content
-const extractSampleTableData = (content: string) => {
-  // This is a simple example - in real implementation, you might want more sophisticated parsing
-  if (content.includes("bảo hiểm") || content.includes("insurance")) {
-    return [
-      {
-        Năm: 2022,
-        "Doanh thu (tỷ đồng)": 177303,
-        "Tăng trưởng (%)": 16.9,
-        "Bảo hiểm nhân thọ": 120850,
-        "Bảo hiểm phi nhân thọ": 56453,
-      },
-      {
-        Năm: 2023,
-        "Doanh thu (tỷ đồng)": 227398,
-        "Tăng trưởng (%)": -0.3,
-        "Bảo hiểm nhân thọ": 156720,
-        "Bảo hiểm phi nhân thọ": 70678,
-      },
-    ];
-  }
-  return null;
-};
-
 export default function AssistantMessage({
   content,
   messageId,
@@ -64,8 +40,6 @@ export default function AssistantMessage({
   copiedId,
   experimental_attachments,
 }: AssistantMessageProps) {
-  const shouldShowTable = detectTableData(content);
-  const tableData = shouldShowTable ? extractSampleTableData(content) : null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -81,18 +55,6 @@ export default function AssistantMessage({
       <div className="flex-1 min-w-0">
         <div className="bg-neutral-800 rounded-2xl px-4 py-3 relative">
           <MarkdownContent content={content} />
-
-          {/* Table display for data-rich content */}
-          {tableData && tableData.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-neutral-700">
-              <ExcelTable
-                data={tableData}
-                title="Dữ liệu thống kê từ phân tích"
-              />
-            </div>
-          )}
-
-          {/* Attachments display */}
           {experimental_attachments && experimental_attachments.length > 0 && (
             <div className="mt-4 pt-4 border-t border-neutral-700">
               <div className="space-y-2">

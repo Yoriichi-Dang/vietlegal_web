@@ -15,21 +15,28 @@ import { useChat as useChatAI } from "@ai-sdk/react";
 import { MODEL } from "@/constants/model";
 import { Attachment } from "ai";
 import { v4 as uuidv4 } from "uuid";
-import { IconSparkles, IconMenu2 } from "@tabler/icons-react";
+import { IconMenu2, IconSparkles } from "@tabler/icons-react";
+
 interface ChatInterfaceProps {
   onToggleSidebar: () => void;
   showMenuButton?: boolean;
 }
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export default function ChatInterface({
   onToggleSidebar,
   showMenuButton = true,
 }: ChatInterfaceProps) {
   const [attachedFiles, setAttachedFiles] = useState<ChatAttachment[]>([]);
+
+  // State để lưu research content từ agent
+  const [researchContent, setResearchContent] = useState<string>("");
+  const [isSearching, setIsSearching] = useState(false); //search data
+  const [isCompletedSearching, setIsCompletedSearching] = useState(false); //completed searching
+  const [isResearchStreaming, setIsResearchStreaming] = useState(false);
+  const [completeResearchStream, setCompleteResearchStream] = useState(false);
   const [showResearchPanel, setShowResearchPanel] = useState(false);
-  const [showThinking, setShowThinking] = useState(false);
   const {
     addMessage,
     currentChat,
@@ -37,14 +44,21 @@ export default function ChatInterface({
     updateChatTitle,
     createNewChat,
   } = useChatProvider();
+
   const [isFirstMessageNewChat, setIsFirstMessageNewChat] =
     useState<boolean>(false);
   const [newChatId, setNewChatId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const { messages, status, input, handleInputChange, handleSubmit } =
+  const [dataLength, setDataLength] = useState(0);
+  const [searchesResult, setSearchesResult] = useState<any[]>([]);
+
+  const { messages, status, input, handleInputChange, handleSubmit, data } =
     useChatAI({
+      experimental_throttle: 130,
+      streamProtocol: "data",
+      api: "http://localhost:8000/chat/stream",
       initialMessages:
         (currentChat &&
           currentChat?.messages?.map((message) => {
@@ -66,12 +80,6 @@ export default function ChatInterface({
         [],
       onFinish: async (message) => {
         // Hide thinking animation
-        setShowThinking(false);
-
-        // Auto-show research panel after AI response for research queries
-        if (shouldShowResearchPanel(message.content)) {
-          setTimeout(() => setShowResearchPanel(true), 500);
-        }
 
         if (!currentChat) {
           setMessage(message.content);
@@ -83,6 +91,10 @@ export default function ChatInterface({
           model_id: MODEL.id.toString(),
           content: message.content,
         });
+      },
+      onError: (err) => {
+        toast.error(`Error during chat: ${err.message}`);
+        setIsResearchStreaming(false);
       },
     });
   useEffect(() => {
@@ -96,6 +108,68 @@ export default function ChatInterface({
       setIsFirstMessageNewChat(false);
     }
   }, [isFirstMessageNewChat, newChatId, message, addMessage]);
+
+  // Xử lý data stream từ FastAPI
+  useEffect(() => {
+    if (data && Array.isArray(data) && data.length > 0) {
+      const newDatas: any[] = data.slice(dataLength);
+      if (newDatas.length > 0) {
+        setDataLength(data.length);
+        newDatas.forEach((newData) => {
+          if (newData.type === "tool_call") {
+            if (newData.toolName === "start_search") {
+              setIsSearching(true);
+            } else if (newData.toolName === "complete_search") {
+              setSearchesResult(newData.data);
+              setIsSearching(false);
+              setIsCompletedSearching(true);
+            }
+          } else if (newData.type === "agent_update") {
+            if (
+              newData.agent_send_to === "researcher_agent" &&
+              newData.action === "transfer_to_researcher_agent"
+            ) {
+              if (!isResearchStreaming) {
+                setIsCompletedSearching(false);
+                setIsResearchStreaming(true);
+              }
+              setResearchContent((prev) => prev + newData.content);
+            } else if (
+              newData.agent_send_to === "supervisor_agent" &&
+              newData.action === "write_report"
+            ) {
+              setIsResearchStreaming(false);
+              setCompleteResearchStream(true);
+            }
+          }
+        });
+      }
+    }
+  }, [
+    data,
+    dataLength,
+    isResearchStreaming,
+    isCompletedSearching,
+    isSearching,
+  ]);
+
+  // Reset khi bắt đầu chat mới
+  useEffect(() => {
+    if (status === "submitted") {
+      setResearchContent("");
+      setSearchesResult([]);
+      setIsResearchStreaming(false);
+      setCompleteResearchStream(false); // Reset to false when starting new request
+    }
+  }, [status]);
+
+  // Stop streaming when status changes from streaming to ready
+  useEffect(() => {
+    if (status === "ready" && isResearchStreaming) {
+      setIsResearchStreaming(false);
+    }
+  }, [status, isResearchStreaming]);
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -112,9 +186,9 @@ export default function ChatInterface({
       setAttachedFiles((prev) => [...prev, newFile]);
       setIsUploading(false);
     });
-
     event.target.value = "";
   };
+
   const deleteFile = async (fileKey: string) => {
     try {
       const response = await fetch("/api/delete-file", {
@@ -126,18 +200,16 @@ export default function ChatInterface({
       });
 
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error);
       }
-
       return result;
     } catch (error) {
       console.error("Delete error:", error);
       throw error;
     }
   };
-  // Remove file
+
   const removeFile = async (fileId: string) => {
     const fileKey = attachedFiles
       .find((file) => file.id === fileId)
@@ -152,6 +224,7 @@ export default function ChatInterface({
       toast.success("File deleted successfully");
     }
   };
+
   const computeSHA256 = async (file: File) => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
@@ -161,6 +234,7 @@ export default function ChatInterface({
       .join("");
     return hashHex;
   };
+
   const uploadFile = async (file: File) => {
     const response = await fetch("/api/signed-url", {
       method: "POST",
@@ -189,13 +263,12 @@ export default function ChatInterface({
     const fileUrl = data.success.url.split("?")[0];
     return { fileUrl, id: data.success.id };
   };
-  // Handle form submit
-  // Helper function to convert ChatAttachment to Attachment
+
   const convertToAIAttachments = (
     chatAttachments: ChatAttachment[]
   ): Attachment[] => {
     return chatAttachments
-      .filter((file) => file.file_url) // Only include files with valid URLs
+      .filter((file) => file.file_url)
       .map((file) => ({
         name: file.file_name,
         contentType: file.file_type,
@@ -203,45 +276,11 @@ export default function ChatInterface({
       }));
   };
 
-  // Check if message should trigger research panel
-  const shouldShowResearchPanel = (message: string) => {
-    const researchKeywords = [
-      "nghiên cứu",
-      "research",
-      "tìm hiểu",
-      "phân tích",
-      "điều tra",
-      "luật",
-      "quy định",
-      "văn bản",
-      "pháp luật",
-      "thuế",
-      "báo cáo",
-      "tổng hợp",
-      "thống kê",
-      "dữ liệu",
-      "bảo hiểm",
-      "so sánh",
-      "đánh giá",
-      "xu hướng",
-      "thị trường",
-      "chính sách",
-    ];
-    const messageLower = message.toLowerCase();
-    return researchKeywords.some((keyword) => messageLower.includes(keyword));
-  };
-
-  // Handle form submit
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (input.trim() === "") {
       toast.error("Vui lòng nhập tin nhắn ");
       return;
-    }
-
-    // Auto-show thinking animation for relevant queries
-    if (shouldShowResearchPanel(input.trim())) {
-      setShowThinking(true);
     }
 
     const userMessage: ChatMessage = {
@@ -250,6 +289,7 @@ export default function ChatInterface({
       content: input.trim(),
       attachments: attachedFiles,
     };
+
     const aiAttachments = convertToAIAttachments(attachedFiles);
     const submitOptions: any = {
       body: {
@@ -258,12 +298,16 @@ export default function ChatInterface({
           file_id: file.id,
           file_url: file.file_url!,
         })),
+        question: input.trim(),
       },
     };
+
     if (aiAttachments.length > 0) {
       submitOptions.experimental_attachments = aiAttachments;
     }
+
     handleSubmit(e, submitOptions);
+
     try {
       if (currentChat) {
         if (!currentChat.messages) {
@@ -274,7 +318,6 @@ export default function ChatInterface({
         }
         await addMessage(currentChat?.id || "", userMessage);
       } else {
-        // new chat
         const newChat = await createNewChat({
           title: input.trim().slice(0, 20),
         });
@@ -285,27 +328,12 @@ export default function ChatInterface({
           setNewChatId(newChat.id);
         }
       }
-      //   // // Submit with options
-      //   if (!currentChat) {
-      //     const newChat = await createNewChat({
-      //       title: input.trim().slice(0, 20),
-      //     });
-      //     if (newChat) {
-      //       window.history.replaceState({}, "", `/c/${newChat.id}`);
-      //       await addMessage(newChat.id, userMessage);
-      //       handleSubmit(e, submitOptions);
-      //     }
-      //   } else {
-      //     handleSubmit(e, submitOptions);
-      //     await addMessage(currentChat?.id || "", userMessage);
-      //   }
       if (attachedFiles.length > 0) setAttachedFiles([]);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Không thể gửi tin nhắn");
     }
   };
-
   return (
     <div
       ref={chatContainerRef}
@@ -313,7 +341,6 @@ export default function ChatInterface({
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 md:p-6 pb-4">
-        {/* Left side - Menu button (only on mobile) */}
         {showMenuButton && (
           <motion.button
             onClick={onToggleSidebar}
@@ -325,16 +352,14 @@ export default function ChatInterface({
           </motion.button>
         )}
 
-        {/* Center - Chat title */}
         <div className="hidden md:flex flex-1 justify-center">
           {currentChat && (
-            <div className="text-neutral-300 font-medium">
+            <div className="text-neutral-300 font-medium flex items-center gap-2">
               {currentChat.title}
             </div>
           )}
         </div>
 
-        {/* Right side - Controls */}
         <div className="flex items-center gap-3 text-neutral-400">
           {/* Research Panel Toggle Button */}
           <motion.button
@@ -355,36 +380,34 @@ export default function ChatInterface({
         </div>
       </div>
 
-      {/* Main Content Area - Chat + Sidebar */}
+      {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Chat Messages Area */}
         <div
           className={`flex flex-col transition-all duration-300 ${
-            showResearchPanel ? "w-[50%]" : "w-full"
+            isResearchStreaming ? "w-[50%]" : "w-full"
           }`}
         >
           <ChatContent
             messages={messages || []}
-            isLoading={status === "submitted"}
-            isStreaming={status === "streaming"}
+            isLoading={status === "submitted" || status === "streaming"}
+            isStreaming={completeResearchStream}
           />
 
-          {/* Thinking Animation */}
-          {showThinking && (
+          {(isSearching || isCompletedSearching || isResearchStreaming) && (
             <div className="px-4 md:px-6 pb-4">
               <div className="max-w-4xl mx-auto">
                 <ThinkingAnimation
-                  isVisible={showThinking}
-                  onComplete={() => {
-                    setShowThinking(false);
-                    setTimeout(() => setShowResearchPanel(true), 500);
-                  }}
+                  isVisible={
+                    isSearching || isCompletedSearching || isResearchStreaming
+                  }
+                  isSearching={isSearching}
+                  isCompletedSearching={isCompletedSearching}
+                  isTransferToResearcher={isResearchStreaming}
                 />
               </div>
             </div>
           )}
-
-          {/* Input Area - Inside Chat Area */}
 
           <ChatInput
             onSubmit={onSubmit}
@@ -399,29 +422,19 @@ export default function ChatInterface({
 
         {/* Research Panel */}
         <ResearchPanel
-          isOpen={showResearchPanel}
+          isOpen={isResearchStreaming || showResearchPanel}
           onClose={() => setShowResearchPanel(false)}
-          title="Tổng hợp về bảo hiểm"
-          showSourcesUsed={true}
-          showTable={true}
-          markdownContent={`
-## Tổng quan về thị trường bảo hiểm Việt Nam
-
-### A. Định nghĩa và vai trò của bảo hiểm trong nền kinh tế
-
-Bảo hiểm, trong bối cảnh kinh tế Việt Nam, được định nghĩa là một hoạt động kinh doanh cốt lõi nhằm gia định và đa dạng hóa rủi ro. Mô hình này hoạt động dựa trên nguyên tắc tập hợp rủi ro từ các cá nhân hoặc tổ chức riêng lẻ và phân phối lại chúng trên một danh mục đầu tư lớn hơn, qua đó giảm thiểu tác động của các sự kiện bất ngờ đối với từng chủ thể.
-
-### B. Phân loại các loại hình bảo hiểm tại Việt Nam
-
-Hệ thống bảo hiểm tại Việt Nam được cấu trúc một cách chặt chẽ, phân chia thành hai loại hình chính để đáp ứng các nhu cầu khác nhau:
-
-1. **Bảo hiểm nhân thọ**: Tập trung vào việc bảo vệ tính mạng và sức khỏe con người
-2. **Bảo hiểm phi nhân thọ**: Bao gồm bảo hiểm tài sản, trách nhiệm dân sự, và các rủi ro khác
-
-### C. Thách thức và cơ hội của ngành bảo hiểm
-
-Thị trường bảo hiểm Việt Nam, mặc dù có tiềm năng lớn, đang phải đối mặt với nhiều thách thức đáng kể, đồng thời cũng mở ra những cơ hội phát triển mới.
-          `}
+          title={
+            isResearchStreaming
+              ? "Research Agent (Streaming...)"
+              : "Research Panel"
+          }
+          sources={searchesResult.map((search) => ({
+            title: search.title,
+            url: search.url,
+            status: "completed",
+          }))}
+          markdownContent={researchContent}
         />
       </div>
     </div>

@@ -20,58 +20,35 @@ interface ThinkingStep {
 
 interface ThinkingAnimationProps {
   isVisible: boolean;
-  onComplete?: () => void;
+  isSearching?: boolean;
+  isCompletedSearching?: boolean;
+  isTransferToResearcher?: boolean;
 }
 
 const thinkingSteps: ThinkingStep[] = [
   {
     id: "1",
-    type: "thinking",
-    title: "Phân tích câu hỏi",
-    description: "Đang hiểu yêu cầu về tổng hợp thông tin bảo hiểm Việt Nam...",
+    type: "searching",
+    title: "Đang tìm kiếm thông tin",
+    description: "Đang tìm kiếm các nguồn tài liệu và dữ liệu liên quan...",
     duration: 2000,
     status: "pending",
   },
   {
     id: "2",
-    type: "searching",
-    title: "Tìm kiếm nguồn tài liệu",
-    description:
-      "Đang tìm kiếm các nguồn đáng tin cậy về luật bảo hiểm, chính sách BHXH...",
-    duration: 3000,
+    type: "analyzing",
+    title: "Hoàn tất tìm kiếm",
+    description: "Đã thu thập đủ thông tin từ các nguồn đáng tin cậy...",
+    duration: 1500,
     status: "pending",
   },
   {
     id: "3",
-    type: "searching",
-    title: "Thu thập dữ liệu",
-    description: "Đang đọc và phân tích nội dung từ 14 nguồn tài liệu...",
-    duration: 4000,
-    status: "pending",
-  },
-  {
-    id: "4",
-    type: "analyzing",
-    title: "Phân tích và tổng hợp",
-    description: "Đang phân tích thông tin, so sánh các quy định pháp luật...",
-    duration: 3500,
-    status: "pending",
-  },
-  {
-    id: "5",
-    type: "analyzing",
-    title: "Cấu trúc báo cáo",
+    type: "thinking",
+    title: "Đang viết kết quả",
     description:
-      "Đang tổ chức thông tin thành các phần: định nghĩa, phân loại, thách thức...",
-    duration: 2500,
-    status: "pending",
-  },
-  {
-    id: "6",
-    type: "completed",
-    title: "Hoàn thành",
-    description: "Đã tạo báo cáo tổng quan về thị trường bảo hiểm Việt Nam",
-    duration: 1000,
+      "Đang phân tích và tạo báo cáo chi tiết dựa trên dữ liệu đã tìm được...",
+    duration: 3000,
     status: "pending",
   },
 ];
@@ -140,77 +117,64 @@ const getStepIcon = (type: string, status: string) => {
 
 export default function ThinkingAnimation({
   isVisible,
-  onComplete,
+  isSearching = false,
+  isCompletedSearching = false,
+  isTransferToResearcher = false,
 }: ThinkingAnimationProps) {
   const [steps, setSteps] = useState(thinkingSteps);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // Update steps based on props
   useEffect(() => {
     if (!isVisible) {
-      setSteps(thinkingSteps);
+      setSteps(
+        thinkingSteps.map((step) => ({ ...step, status: "pending" as const }))
+      );
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
-    let currentIndex = 0;
+    setSteps((prevSteps) => [
+      {
+        ...prevSteps[0],
+        status: isSearching
+          ? ("active" as const)
+          : !isSearching && (isCompletedSearching || isTransferToResearcher)
+          ? ("completed" as const)
+          : ("pending" as const),
+      },
+      {
+        ...prevSteps[1],
+        status: isCompletedSearching
+          ? ("active" as const)
+          : !isCompletedSearching && isTransferToResearcher
+          ? ("completed" as const)
+          : ("pending" as const),
+      },
+      {
+        ...prevSteps[2],
+        status: isTransferToResearcher
+          ? ("active" as const)
+          : ("pending" as const),
+      },
+    ]);
+  }, [isVisible, isSearching, isCompletedSearching, isTransferToResearcher]);
 
-    const processNextStep = () => {
-      if (currentIndex < steps.length) {
-        // Set current step as active
-        setSteps((prev) =>
-          prev.map((step, index) => ({
-            ...step,
-            status:
-              index === currentIndex
-                ? "active"
-                : index < currentIndex
-                ? "completed"
-                : "pending",
-          }))
-        );
-
-        // Auto-scroll to current step
-        setTimeout(() => {
-          const currentStepElement = stepRefs.current[currentIndex];
-          if (currentStepElement && scrollContainerRef.current) {
-            currentStepElement.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-          }
-        }, 100);
-
-        // Schedule next step
-        timeoutId = setTimeout(() => {
-          // Mark current step as completed
-          setSteps((prev) =>
-            prev.map((step, index) => ({
-              ...step,
-              status: index <= currentIndex ? "completed" : "pending",
-            }))
-          );
-
-          currentIndex++;
-
-          if (currentIndex < steps.length) {
-            processNextStep();
-          } else {
-            // All steps completed
-            setTimeout(() => {
-              onComplete?.();
-            }, 1000);
-          }
-        }, steps[currentIndex].duration || 2000);
-      }
-    };
-
-    processNextStep();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isVisible, onComplete]);
+  // Auto-scroll to active step
+  useEffect(() => {
+    const activeIndex = steps.findIndex((step) => step.status === "active");
+    if (activeIndex !== -1) {
+      setTimeout(() => {
+        const activeStepElement = stepRefs.current[activeIndex];
+        if (activeStepElement && scrollContainerRef.current) {
+          activeStepElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100);
+    }
+  }, [steps]);
 
   if (!isVisible) return null;
 
@@ -229,7 +193,15 @@ export default function ThinkingAnimation({
         >
           <IconBrain className="h-4 w-4 text-blue-400" />
         </motion.div>
-        <h3 className="text-white font-medium text-sm">Đang suy nghĩ...</h3>
+        <h3 className="text-white font-medium text-sm">
+          {isSearching
+            ? "Đang tìm kiếm..."
+            : isCompletedSearching
+            ? "Đã tìm kiếm xong..."
+            : isTransferToResearcher
+            ? "Đang viết báo cáo..."
+            : "Đang xử lý..."}
+        </h3>
       </div>
 
       {/* Scrollable Content */}
